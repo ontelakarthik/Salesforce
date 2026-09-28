@@ -1,0 +1,11 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "--build-arg"
+      - "NEXT_PUBLIC_API_BASE_URL=https://crm-lite-backend-819750641834.asia-south1.run.app/api/v1"
+      - "-t"
+      - "asia-south1-docker.pkg.dev/crm-lite-506504/crm-lite/crm-lite-frontend:latest"
+      - "."
+images:
+  - "asia-south1-docker.pkg.dev/crm-lite-506504/crm-lite/crm-lite-frontend:latest"

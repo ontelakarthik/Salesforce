@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: crmlite
+      POSTGRES_PASSWORD: crmlite
+      POSTGRES_DB: crmlite
+    ports:
+      - "5434:5432"   # host 5434: 5433 is taken by another project's Postgres container
+    volumes:
+      - crmlite_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crmlite -d crmlite"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    # Runs the pending Alembic migrations once, then starts the API — this
+    # compose file is the only place that needs to know that ordering.
+    command: sh -c "uv run alembic upgrade head && uv run uvicorn src.server:app --host 0.0.0.0 --port 8000"
+    environment:
+      APP_NAME: crm-lite-service
+      APP_ENV: local
+      API_PREFIX: /api/v1
+      LOG_LEVEL: INFO
+      # Service name, not localhost:5433 — containers reach postgres over the
+      # compose network on its own port 5432.
+      DATABASE_URL: postgresql+psycopg://crmlite:crmlite@postgres:5432/crmlite
+      GATEWAY_EMPLOYEE_HEADER: X-Employee-Id
+      GATEWAY_ROLES_HEADER: X-Roles
+      DEV_AUTH_BYPASS: "false"
+    ports:
+      - "8000:8000"   # direct access for debugging; the gateway is the intended entrypoint
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  gateway:
+    build: ./gateway
+    environment:
+      BACKEND_BASE_URL: http://backend:8000
+      GATEWAY_EMPLOYEE_HEADER: X-Employee-Id
+      GATEWAY_ROLES_HEADER: X-Roles
+      # Must match whatever secret you sign test/real JWTs with — override
+      # via a root .env (JWT_SECRET=...) for anything beyond local dev.
+      JWT_SECRET: ${JWT_SECRET:-crm-lite-gateway-dev-secret-key-please-change-2026}
+      GATEWAY_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"   # the only port a frontend should ever call
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  crmlite_postgres_data:

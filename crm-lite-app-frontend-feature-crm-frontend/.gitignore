@@ -1,0 +1,13 @@
+.env
+.idea/
+
+# The backend has been split out of this repo (see CLAUDE.md); this only
+# guards against a leftover local venv/cache that failed to delete on Windows
+# (file lock) from ever getting re-tracked by a future `git add -A`.
+/backend/
+
+# runtime logs
+*.log
+
+# Salesforce CLI local metadata cache (unrelated to this app, churns constantly)
+.sf/
