@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.sqlite3
+*.db
+*.db-journal
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.idea/
+
+# runtime logs
+*.log
+
+# Salesforce CLI local metadata cache (unrelated to this app, churns constantly)
+.sf/

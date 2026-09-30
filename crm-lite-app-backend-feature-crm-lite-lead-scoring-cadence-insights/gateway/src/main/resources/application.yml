@@ -1,0 +1,56 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: crm-lite-gateway
+  cloud:
+    gateway:
+      # Every route below forwards 1:1 to the backend's own path — the
+      # backend already mounts everything under API_PREFIX (/api/v1) plus
+      # an unprefixed /health, so no RewritePath is needed here.
+      routes:
+        - id: crm-lite-api
+          uri: ${BACKEND_BASE_URL:http://localhost:8000}
+          predicates:
+            - Path=/api/v1/**
+        - id: crm-lite-health
+          uri: ${BACKEND_BASE_URL:http://localhost:8000}
+          predicates:
+            - Path=/health,/health/**
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: ${GATEWAY_CORS_ORIGINS:http://localhost:3000}
+            allowedMethods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+            allowedHeaders: '*'
+            exposedHeaders: [X-Request-Id]
+
+# --- CRM Lite gateway-specific config ---
+gateway:
+  # Header names the backend trusts as gateway-forwarded identity — must
+  # match the backend's GATEWAY_EMPLOYEE_HEADER / GATEWAY_ROLES_HEADER.
+  headers:
+    employee-id: ${GATEWAY_EMPLOYEE_HEADER:X-Employee-Id}
+    roles: ${GATEWAY_ROLES_HEADER:X-Roles}
+  jwt:
+    # HS256 shared secret used to verify the Authorization: Bearer token on
+    # every proxied request. CHANGE THIS outside local dev — whoever holds
+    # this secret can mint a token for any employee_id/roles they like.
+    secret: ${JWT_SECRET:crm-lite-gateway-dev-secret-key-please-change-2026}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    com.tachyon.crmlite.gateway: INFO
+    org.springframework.cloud.gateway: INFO
