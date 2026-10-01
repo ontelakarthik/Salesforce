@@ -184,6 +184,13 @@ class TestFreeFormWindow:
             _send(lead, _FakeTemplateRepo(), _FakeSender(fail=True), body="Hi")
         assert exc.value.code == "WHATSAPP_SEND_FAILED"
 
+    def test_spaced_number_on_an_existing_lead_is_sent_normalized(self):
+        lead, sender = _lead(), _FakeSender()
+        lead.whatsapp_number = "+91 7330671971"  # stored before Lead-save normalization existed
+        out, _ = _send(lead, _FakeTemplateRepo(), sender, body="Hi")
+        assert sender.sent == [("+917330671971", "Hi")]
+        assert out.to_recipients == "+917330671971"
+
     def test_free_form_is_still_attempted_when_window_looks_closed(self):
         sender = _FakeSender()
         out, _ = _send(_lead(window_expires_at=None), _FakeTemplateRepo(), sender, body="Hi")

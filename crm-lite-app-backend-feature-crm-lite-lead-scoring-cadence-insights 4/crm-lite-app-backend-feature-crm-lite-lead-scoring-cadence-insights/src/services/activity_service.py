@@ -36,6 +36,7 @@ from src.services.email_client import EmailSender
 from src.services.sms_service import SmsSender
 from src.utils.error_handling import handle_errors
 from src.utils.exceptions import DomainError
+from src.utils.phone import normalize_phone
 from src.utils.scope import require_account_scope, require_lead_scope
 from src.utils.security import CurrentUser
 
@@ -240,7 +241,9 @@ def send_lead_sms(user: CurrentUser, lead_repo: LeadRepository, comm_repo: Commu
     contact_email."""
     lead = _get_lead_or_404(lead_repo, lid)
     require_lead_scope(user, lead_repo, lid, for_write=True)
-    to_number = lead.contact_phone or lead.mobile_phone
+    # Normalized here too, not just on Lead save, so leads stored before
+    # that cleanup existed ("+91 7330671971") still send correctly.
+    to_number = normalize_phone(lead.contact_phone) or normalize_phone(lead.mobile_phone)
     if not to_number:
         raise DomainError(
             "SMS_RECIPIENT_MISSING",

@@ -34,6 +34,7 @@ from src.services.activity_service import _communication_out
 from src.services.admin_service import verified_employee_uuid
 from src.utils.error_handling import handle_errors
 from src.utils.exceptions import DomainError
+from src.utils.phone import normalize_phone
 from src.utils.scope import require_lead_scope
 from src.utils.security import CurrentUser
 
@@ -87,7 +88,10 @@ def send_lead_whatsapp(user: CurrentUser, lead_repo: LeadRepository, comm_repo: 
     if lead is None:
         raise DomainError("LEAD_NOT_FOUND", f"No lead '{lid}'.", 404)
     require_lead_scope(user, lead_repo, lid, for_write=True)
-    to_number = lead.whatsapp_number or lead.contact_phone or lead.mobile_phone
+    # Normalized here too, not just on Lead save, so leads stored before
+    # that cleanup existed ("+91 7330671971") still send correctly.
+    to_number = (normalize_phone(lead.whatsapp_number) or normalize_phone(lead.contact_phone)
+                 or normalize_phone(lead.mobile_phone))
     if not to_number:
         raise DomainError(
             "WHATSAPP_RECIPIENT_MISSING",

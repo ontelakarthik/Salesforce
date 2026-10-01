@@ -43,6 +43,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import AuditMixin, Base, SoftDeleteMixin
+from src.utils.phone import normalize_phone
 from src.models.common import AuditOut
 
 # --- lookups -----------------------------------------------------------------
@@ -1085,6 +1086,11 @@ class LeadCreate(BaseModel):
     def _check_contact_email(cls, v: str) -> str:
         return _validate_email_format(v)
 
+    @field_validator("contact_phone", "mobile_phone", "whatsapp_number")
+    @classmethod
+    def _clean_phone(cls, v: str | None) -> str | None:
+        return normalize_phone(v)
+
 
 class LeadUpdate(BaseModel):
     company_name: str | None = Field(default=None, min_length=1, max_length=255)
@@ -1123,6 +1129,11 @@ class LeadUpdate(BaseModel):
         if v is None:
             raise ValueError("Email is required.")
         return _validate_email_format(v)
+
+    @field_validator("contact_phone", "mobile_phone", "whatsapp_number")
+    @classmethod
+    def _clean_phone(cls, v: str | None) -> str | None:
+        return normalize_phone(v)
 
 
 class LeadOut(AuditOut):
