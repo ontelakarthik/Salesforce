@@ -39,14 +39,14 @@ class SmsSender(Protocol):
         Raise DomainError on failure — a non-2xx provider response, or a
         network failure — never return on a failed send."""
         ...
-
-
+    
+    
 class TwilioSmsSender:
     def __init__(self, account_sid: str, auth_token: str, from_number: str) -> None:
         self._account_sid = account_sid
         self._auth_token = auth_token
         self._from_number = from_number
-
+     
     def send(self, to_number: str, body: str) -> str:
         url = f"https://api.twilio.com/2010-04-01/Accounts/{self._account_sid}/Messages.json"
         try:
