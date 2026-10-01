@@ -358,6 +358,13 @@ class Lead(Base, AuditMixin, SoftDeleteMixin):
     whatsapp_window_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     source: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="NEW")  # see models.enums.LeadStatus
+    # Internal, backend-only "has this lead ever been successfully contacted"
+    # flag — deliberately absent from LeadCreate/LeadUpdate/LeadOut and
+    # _FLS_FIELDS, so it can't be set or seen through the API/UI. Flipped
+    # exactly once, by activity_service.mark_lead_as_contacted_if_first_contact()
+    # after the first successful Email/SMS/Call; once True, those activities
+    # never auto-change status again (the rep's manual status is left alone).
+    contacted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     lead_score: Mapped[int] = mapped_column(default=0)  # system-computed, see crm_service._compute_lead_score
     # Web-enriched scoring (BRD SC-2) — the live-web-search component of
     # lead_score, kept separate from the rule-based component so re-running

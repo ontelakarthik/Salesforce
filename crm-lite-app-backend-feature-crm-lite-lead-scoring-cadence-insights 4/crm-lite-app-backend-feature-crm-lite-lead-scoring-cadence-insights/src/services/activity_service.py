@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 
 from src.config.config_reader import get_settings
 from src.models import activity_models
-from src.models.enums import CallOutcome, LeadCommunicationChannel
+from src.models.enums import CallOutcome, LeadCommunicationChannel, LeadStatus
 from src.repositories._base import resolve_lookup_id
 from src.repositories.activity_repository import (
     AuditLogRepository,
@@ -173,6 +173,42 @@ def _get_lead_or_404(lead_repo: LeadRepository, lid):
     return row
 
 
+#: Statuses a lead's first successful contact may move forward to CONTACTED.
+#: A lead the rep already moved past these (or into a terminal state) by hand
+#: keeps its status — first contact only ever records contacted=True then,
+#: never drags the status backwards.
+_FIRST_CONTACT_ADVANCES_FROM = {LeadStatus.NEW.value, LeadStatus.ATTEMPTING_CONTACT.value}
+
+#: Logged-call outcomes that mean the rep actually reached the lead — a
+#: NO_ANSWER/BUSY/VOICEMAIL/WRONG_NUMBER call is an attempt, not a contact.
+_CONTACT_MADE_CALL_OUTCOMES = {CallOutcome.CONNECTED.value}
+
+
+def mark_lead_as_contacted_if_first_contact(lead_repo: LeadRepository, lid, *, updated_by: str):
+    """Call ONLY after an Email/SMS/Call has succeeded. The one automatic
+    status transition tied to outreach: contacted False -> True (and status
+    -> CONTACTED if still in _FIRST_CONTACT_ADVANCES_FROM), exactly once.
+    Once contacted is True this is a no-op, so later activities never touch
+    whatever status the rep has since set.
+
+    Race-free via update_if()'s row lock: two activities finishing at the
+    same time both read contacted=False, but only the first to take the lock
+    still matches `expected`; the second gets None, re-reads, sees
+    contacted=True and stops. The retry also covers a manual status change
+    landing between the read and the lock."""
+    for _ in range(3):
+        lead = lead_repo.get(lid)
+        if lead is None or lead.contacted:
+            return lead
+        fields: dict = {"contacted": True, "updated_by": updated_by}
+        if lead.status in _FIRST_CONTACT_ADVANCES_FROM:
+            fields["status"] = LeadStatus.CONTACTED.value
+        updated = lead_repo.update_if(lid, expected={"contacted": False, "status": lead.status}, **fields)
+        if updated is not None:
+            return updated
+    return lead_repo.get(lid)
+
+
 @handle_errors("list lead communications")
 def list_lead_communications(user: CurrentUser, lead_repo: LeadRepository,
                              comm_repo: CommunicationRepository,
@@ -198,8 +234,12 @@ def add_lead_communication(user: CurrentUser, lead_repo: LeadRepository,
             f"'{payload.channel}' is not a valid channel for a lead activity. Choose from: "
             f"{', '.join(sorted(_LEAD_COMM_CHANNELS))}.", 422)
     payload = payload.model_copy(update={"channel": channel})
-    return _create_communication(
+    created = _create_communication(
         user, comm_repo, disposition_repo, payload, account_id=None, agreement_id=None, lead_id=lid)
+    # "Log a call" — only a call that actually reached the lead counts.
+    if channel == LeadCommunicationChannel.CALL.value and created.call_outcome in _CONTACT_MADE_CALL_OUTCOMES:
+        mark_lead_as_contacted_if_first_contact(lead_repo, lid, updated_by=user.employee_id)
+    return created
 
 
 @handle_errors("send lead email")
@@ -225,8 +265,10 @@ def send_lead_email(user: CurrentUser, lead_repo: LeadRepository, comm_repo: Com
         body=payload.body, from_address=get_settings().SMTP_FROM_ADDRESS,
         to_recipients=to_address, occurred_at=_now(), source="SENT",
     )
-    return _create_communication(
+    created = _create_communication(
         user, comm_repo, disposition_repo, create_payload, account_id=None, agreement_id=None, lead_id=lid)
+    mark_lead_as_contacted_if_first_contact(lead_repo, lid, updated_by=user.employee_id)
+    return created
 
 
 @handle_errors("send lead sms")
@@ -256,8 +298,10 @@ def send_lead_sms(user: CurrentUser, lead_repo: LeadRepository, comm_repo: Commu
         to_recipients=to_number, occurred_at=_now(), source="SENT",
         provider_message_id=provider_message_id,
     )
-    return _create_communication(
+    created = _create_communication(
         user, comm_repo, disposition_repo, create_payload, account_id=None, agreement_id=None, lead_id=lid)
+    mark_lead_as_contacted_if_first_contact(lead_repo, lid, updated_by=user.employee_id)
+    return created
 
 
 def _get_lead_communication_or_404(comm_repo: CommunicationRepository, lid, comm_id):

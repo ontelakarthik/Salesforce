@@ -763,7 +763,10 @@ export default function Lead({ id }: { id: string }) {
               <>
                 <LeadCadencePanel leadId={id} />
                 <div style={{ marginTop: 16 }}>
-                  <LeadActivityPanel lead={lead} />
+                  <LeadActivityPanel
+                    lead={lead}
+                    onActivity={() => getLead(api, id).then(setLead).catch(() => {})}
+                  />
                 </div>
               </>
             ),

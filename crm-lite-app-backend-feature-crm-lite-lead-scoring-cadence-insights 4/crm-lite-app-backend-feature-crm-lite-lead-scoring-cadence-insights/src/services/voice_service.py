@@ -33,7 +33,7 @@ from src.models.enums import LeadCommunicationChannel
 from src.repositories._base import resolve_lookup_id
 from src.repositories.activity_repository import CommunicationRepository, get_call_disposition_repository
 from src.repositories.crm_repository import LeadRepository
-from src.services.activity_service import _communication_out
+from src.services.activity_service import _communication_out, mark_lead_as_contacted_if_first_contact
 from src.utils.error_handling import handle_errors
 from src.utils.exceptions import DomainError
 from src.utils.scope import require_lead_scope
@@ -118,13 +118,18 @@ def process_voice_status_callback(
     comm_repo: CommunicationRepository, *,
     call_sid: str, parent_call_sid: str | None, call_status: str,
     call_duration: str | None, error_code: str | None,
+    lead_repo: LeadRepository | None = None,
 ) -> None:
     """Looks up the Communication row by ParentCallSid first (the child PSTN
     leg's own status callback, which is where CallStatus/CallDuration
     actually come from — see this module's docstring), falling back to
     CallSid for the rare case this fires for the parent leg itself. Silently
     no-ops if no match — a status webhook must never fail loudly enough to
-    make Twilio retry forever over a call this service isn't tracking."""
+    make Twilio retry forever over a call this service isn't tracking.
+
+    A "completed" (answered) call is the Dial Pad's successful contact, so it
+    runs the same first-contact logic as a manually logged CONNECTED call —
+    idempotent, so Twilio re-sending the callback changes nothing."""
     lookup_sid = parent_call_sid or call_sid
     if not lookup_sid:
         return
@@ -150,6 +155,10 @@ def process_voice_status_callback(
             changes["failure_code"] = error_code
 
     comm_repo.update(existing.id, **changes)
+
+    if status == "completed" and lead_repo is not None and existing.lead_id is not None:
+        mark_lead_as_contacted_if_first_contact(
+            lead_repo, existing.lead_id, updated_by=_VOICE_WEBHOOK_FALLBACK_USER_ID)
 
 
 @handle_errors("update call notes")

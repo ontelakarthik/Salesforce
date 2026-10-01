@@ -46,7 +46,10 @@ function formatDateTime(value: string): string {
   return parsed.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function LeadActivityPanel({ lead }: { lead: LeadOut }) {
+// onActivity: fired after a successful Email/SMS/Call so the parent can
+// re-fetch the lead — the backend may have auto-advanced its status to
+// CONTACTED on first contact.
+export default function LeadActivityPanel({ lead, onActivity }: { lead: LeadOut; onActivity?: () => void }) {
   const api = useApi();
   const [comms, setComms] = useState<CommunicationOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -119,20 +122,32 @@ export default function LeadActivityPanel({ lead }: { lead: LeadOut }) {
         open={showLogCall}
         lead={lead}
         onClose={() => setShowLogCall(false)}
-        onLogged={(c) => setComms((prev) => [c, ...(prev ?? [])])}
-        onUpdated={(c) => setComms((prev) => prev?.map((x) => (x.id === c.id ? c : x)) ?? null)}
+        onLogged={(c) => {
+          setComms((prev) => [c, ...(prev ?? [])]);
+          onActivity?.();
+        }}
+        onUpdated={(c) => {
+          setComms((prev) => prev?.map((x) => (x.id === c.id ? c : x)) ?? null);
+          onActivity?.();
+        }}
       />
       <SendEmailModal
         open={showSendEmail}
         lead={lead}
         onClose={() => setShowSendEmail(false)}
-        onSent={(c) => setComms((prev) => [c, ...(prev ?? [])])}
+        onSent={(c) => {
+          setComms((prev) => [c, ...(prev ?? [])]);
+          onActivity?.();
+        }}
       />
       <SendSmsModal
         open={showSendSms}
         lead={lead}
         onClose={() => setShowSendSms(false)}
-        onSent={(c) => setComms((prev) => [c, ...(prev ?? [])])}
+        onSent={(c) => {
+          setComms((prev) => [c, ...(prev ?? [])]);
+          onActivity?.();
+        }}
       />
       <SendWhatsAppModal
         open={showSendWhatsApp}

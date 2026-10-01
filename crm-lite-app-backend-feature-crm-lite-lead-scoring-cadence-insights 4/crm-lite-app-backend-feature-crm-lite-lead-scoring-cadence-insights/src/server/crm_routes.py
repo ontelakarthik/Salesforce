@@ -350,11 +350,12 @@ def voice_webhook_connect(form: dict[str, str] = Depends(require_twilio_voice_si
 
 @router.post("/voice/webhook/status")
 def voice_webhook_status(form: dict[str, str] = Depends(require_twilio_voice_signature),
-                         comm_repo=Depends(get_communication_repository)):
+                         comm_repo=Depends(get_communication_repository),
+                         lead_repo=Depends(get_lead_repository)):
     voice_service.process_voice_status_callback(
         comm_repo, call_sid=form.get("CallSid", ""), parent_call_sid=form.get("ParentCallSid") or None,
         call_status=form.get("CallStatus", ""), call_duration=form.get("CallDuration"),
-        error_code=form.get("ErrorCode") or None,
+        error_code=form.get("ErrorCode") or None, lead_repo=lead_repo,
     )
     return {"ok": True}
 
