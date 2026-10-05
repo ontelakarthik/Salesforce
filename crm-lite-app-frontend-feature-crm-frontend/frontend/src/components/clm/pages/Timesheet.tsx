@@ -63,6 +63,7 @@ export default function Timesheet() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setTimesheets(null);
     setError(null);
     Promise.all([listTimesheets(api), listAgreements(api)])

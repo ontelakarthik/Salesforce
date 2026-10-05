@@ -69,6 +69,7 @@ export default function LeadActivityPanel({ lead, onActivity }: { lead: LeadOut;
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, lead.id]);
@@ -422,6 +423,7 @@ function LogCallModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setSubject("");
     setDurationMinutes("");
     setNotes("");
@@ -657,6 +659,7 @@ function SendEmailModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setToAddress(lead.contact_email ?? "");
     setSubject("");
     setBody("");
@@ -770,6 +773,7 @@ function SendSmsModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setMessage("");
     setError(null);
   }, [open, lead.id]);
@@ -861,6 +865,7 @@ function SendWhatsAppModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setMessage("");
     setError(null);
   }, [open, lead.id]);

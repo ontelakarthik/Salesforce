@@ -33,6 +33,7 @@ export default function Projects() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setProjects(null);
     setError(null);
     Promise.all([listProjects(api), listAccounts(api, { page_size: 100 })])

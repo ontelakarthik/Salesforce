@@ -82,6 +82,7 @@ export default function RepDashboard() {
 
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setNow(new Date());
   }, []);
 
@@ -120,6 +121,7 @@ export default function RepDashboard() {
     };
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
   useEffect(load, [api]);
 
   function actOnTask(taskId: string, action: "complete" | "skip") {

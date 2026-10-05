@@ -171,12 +171,14 @@ export default function Profiles() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     loadProfiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
   useEffect(() => {
     if (selectedId === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setGranted(null);
       return;
     }

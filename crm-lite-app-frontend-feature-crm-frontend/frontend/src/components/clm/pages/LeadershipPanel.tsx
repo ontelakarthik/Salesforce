@@ -30,6 +30,7 @@ export default function LeadershipPanel() {
   // whichever half it isn't permitted to see.
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setError(null);
     Promise.all([fetchGraceful(getManagerDashboard(api)), fetchGraceful(listLeads(api))])
       .then(([summaryRes, leadsRes]) => {

@@ -58,6 +58,7 @@ export default function Agreements() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setAgreements(null);
     setError(null);
     Promise.all([listAgreements(api), listAccounts(api, { page_size: 100 })])

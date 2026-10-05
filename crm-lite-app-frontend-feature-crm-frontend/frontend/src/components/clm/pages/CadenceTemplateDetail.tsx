@@ -49,6 +49,7 @@ export default function CadenceTemplateDetail({ id }: { id: string }) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, id]);
@@ -216,6 +217,7 @@ function EditTemplateModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setName(template.name);
     setDescription(template.description ?? "");
     setIsActive(template.is_active);
@@ -304,6 +306,7 @@ function StepModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && step) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setStepOrder(String(step.step_order));
       setStepType(step.step_type);
       setSubject(step.subject);

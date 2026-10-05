@@ -50,6 +50,7 @@ export default function CadenceTemplates() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setTemplates(null);
     setError(null);
     listCadenceTemplates(api)

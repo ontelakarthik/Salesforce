@@ -119,6 +119,7 @@ export default function Sow({
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setLoaded(false);
     Promise.all([
       getSowDetail(api, agreement.id).catch(() => null),
@@ -895,6 +896,7 @@ function EditRateModal({
 
   useEffect(() => {
     if (!rateCard) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setRatePerHour(rateCard.rate_per_hour.toString());
     setCurrency(rateCard.currency);
     setNotes(rateCard.notes ?? "");
@@ -1118,6 +1120,7 @@ function EditTeamMemberModal({
 
   useEffect(() => {
     if (!member) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setRateCardId(member.rate_card_id ?? "");
     setOverrideRate(member.override_rate_per_hour?.toString() ?? "");
     setAssignedUntil(member.assigned_until ?? "");
@@ -1416,6 +1419,7 @@ function InvoiceModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setInvoiceRef("");
     setError(null);
   }, [milestone]);

@@ -42,6 +42,7 @@ export default function Project({ id }: { id: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setProject(null);
     setError(null);
     getProject(api, id)

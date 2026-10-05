@@ -77,6 +77,7 @@ export default function ObjectPermissions() {
 
   useEffect(() => {
     if (!selectedObject || !selectedProfile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setGranted(null);
       return;
     }

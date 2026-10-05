@@ -18,7 +18,6 @@ import {
   getAccount,
   listContacts,
   listOpportunities,
-  promoteAccount,
   updateAccount,
   type ContactOut,
   type AccountOut,
@@ -90,6 +89,7 @@ export default function Account({ id }: { id: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setAccount(null);
     setError(null);
     Promise.all([

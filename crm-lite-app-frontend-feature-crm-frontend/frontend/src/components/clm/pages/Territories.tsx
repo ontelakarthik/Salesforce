@@ -42,6 +42,7 @@ export default function Territories() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setRows(null);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,6 +178,7 @@ function TerritoryFormModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setCode(row?.code ?? "");
     setDisplayName(row?.display_name ?? "");
     setDescription(row?.description ?? "");

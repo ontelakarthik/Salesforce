@@ -65,6 +65,7 @@ export default function Radar() {
   }, [api, mine, minScore, practice]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     load();
   }, [load]);
 
@@ -72,6 +73,7 @@ export default function Radar() {
 
   // Keep the focus cursor in range whenever the list changes.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setFocusIdx((i) => Math.min(i, Math.max(0, ranked.length - 1)));
   }, [ranked.length]);
 

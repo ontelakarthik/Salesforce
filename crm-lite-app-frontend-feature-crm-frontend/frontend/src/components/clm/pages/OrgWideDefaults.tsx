@@ -48,6 +48,7 @@ export default function OrgWideDefaults() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);

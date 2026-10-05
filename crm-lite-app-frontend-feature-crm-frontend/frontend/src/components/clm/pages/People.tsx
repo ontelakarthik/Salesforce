@@ -67,6 +67,7 @@ function Employees() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setEmployees(null);
     setError(null);
     Promise.all([listEmployees(api), listProfiles(api), listLookups(api, "territory")])
@@ -339,6 +340,7 @@ function EditEmployeeModal({
 
   useEffect(() => {
     if (!employee) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setFullName(employee.full_name);
     setIsActive(employee.is_active);
     setRoleCodes(employee.roles);
@@ -446,6 +448,7 @@ function Teams() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setTeams(null);
     setError(null);
     listTeams(api)
@@ -612,6 +615,7 @@ function EditTeamModal({
 
   useEffect(() => {
     if (!team) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setDisplayName(team.display_name);
     setPurpose(team.purpose ?? "");
     setAddress(team.address ?? "");

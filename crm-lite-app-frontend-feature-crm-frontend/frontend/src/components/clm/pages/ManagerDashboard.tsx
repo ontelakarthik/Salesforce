@@ -135,6 +135,7 @@ export default function ManagerDashboard() {
   // after mount instead of during render.
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setNow(new Date());
   }, []);
 
@@ -146,6 +147,7 @@ export default function ManagerDashboard() {
   // instead of an error being shown about it.
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setLoaded(false);
     setError(null);
     Promise.all([
@@ -188,9 +190,9 @@ export default function ManagerDashboard() {
   const slaBreached = agreements.filter((a) => a.sla_breached_at);
   const budgetOver70Count = Object.values(sowConsumedPct).filter((p) => p >= 70).length;
   const expiringSoon = agreements.filter((a) => {
-    if (!a.expiry_date) return false;
+    if (!a.expiry_date || !now) return false;
     const t = new Date(a.expiry_date).getTime();
-    return t >= Date.now() && t <= Date.now() + THIRTY_DAYS_MS;
+    return t >= now.getTime() && t <= now.getTime() + THIRTY_DAYS_MS;
   });
 
   const stats: StatCard[] = [

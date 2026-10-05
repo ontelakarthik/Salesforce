@@ -41,6 +41,7 @@ export default function LeadSignalsPanel({ leadId }: { leadId: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setSignals(undefined);
     listLeadSignals(api, leadId)
       .then((rows) => {

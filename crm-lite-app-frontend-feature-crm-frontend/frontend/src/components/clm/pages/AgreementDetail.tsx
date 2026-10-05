@@ -22,6 +22,7 @@ export default function AgreementDetail({ id }: { id: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setAgreement(null);
     setError(null);
     getAgreement(api, id)

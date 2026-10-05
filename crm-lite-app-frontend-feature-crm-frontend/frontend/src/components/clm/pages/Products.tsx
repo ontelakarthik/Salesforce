@@ -33,6 +33,7 @@ export default function Products() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
@@ -146,6 +147,7 @@ function ProductModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && product) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setName(product.name);
       setDescription(product.description);
       setTargetIndustry(product.target_industry ?? "");

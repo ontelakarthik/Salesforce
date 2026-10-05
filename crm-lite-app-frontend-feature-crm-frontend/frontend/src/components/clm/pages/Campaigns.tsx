@@ -23,6 +23,7 @@ export default function Campaigns() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setCampaigns(null);
     setError(null);
     listCampaigns(api)

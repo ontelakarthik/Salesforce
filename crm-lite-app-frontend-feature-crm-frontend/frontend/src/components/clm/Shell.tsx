@@ -32,6 +32,7 @@ export default function Shell({ children }: { children: ReactNode }) {
   // below waits for a real mount before acting on a possibly-stale "logged
   // out" reading during the server-rendered first pass.
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {

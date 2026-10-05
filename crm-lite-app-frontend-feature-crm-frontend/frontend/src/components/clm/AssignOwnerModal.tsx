@@ -27,6 +27,7 @@ export default function AssignOwnerModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setSelected(currentOwnerId ?? "");
       setError(null);
     }

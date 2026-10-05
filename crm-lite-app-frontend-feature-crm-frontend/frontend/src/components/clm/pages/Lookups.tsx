@@ -76,6 +76,7 @@ export default function Lookups() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setRows(null);
     setError(null);
     listLookups(api, config.table)
@@ -303,6 +304,7 @@ function EditLookupModal({
 
   useEffect(() => {
     if (!row) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setDisplayName(row.display_name);
     setSlaHours(row.default_sla_hours != null ? String(row.default_sla_hours) : "");
     setIsTerminal(row.is_terminal ?? false);

@@ -59,6 +59,7 @@ export default function EditCampaignModal({
 
   useEffect(() => {
     if (campaign) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setDraft(toDraft(campaign));
       setError(null);
     }

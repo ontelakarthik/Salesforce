@@ -60,6 +60,7 @@ export default function FieldPermissions() {
 
   useEffect(() => {
     if (!selectedObject || !selectedProfile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setAllEntries(null);
       setGrid(null);
       return;

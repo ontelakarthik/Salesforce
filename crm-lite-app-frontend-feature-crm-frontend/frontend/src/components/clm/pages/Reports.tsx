@@ -39,6 +39,7 @@ export default function Reports() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setAccounts(null);
     setError(null);
     Promise.all([listAccounts(api, { page_size: 100 }), listOpportunities(api)])

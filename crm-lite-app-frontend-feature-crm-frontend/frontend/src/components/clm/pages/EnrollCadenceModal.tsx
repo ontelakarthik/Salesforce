@@ -24,6 +24,7 @@ export default function EnrollCadenceModal({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setSelectedId("");
     setError(null);
     setTemplates(null);

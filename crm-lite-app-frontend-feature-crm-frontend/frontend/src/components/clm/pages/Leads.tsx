@@ -32,6 +32,7 @@ export default function Leads() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setLeads(null);
     setError(null);
     setForbidden(false);

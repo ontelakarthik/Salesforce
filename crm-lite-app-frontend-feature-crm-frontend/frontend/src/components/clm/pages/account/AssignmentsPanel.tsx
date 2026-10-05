@@ -312,6 +312,7 @@ function EditAssignmentModal({
 
   useEffect(() => {
     if (!assignment) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setRole(assignment.role);
     setAssignedUntil(assignment.assigned_until ?? "");
     setError(null);

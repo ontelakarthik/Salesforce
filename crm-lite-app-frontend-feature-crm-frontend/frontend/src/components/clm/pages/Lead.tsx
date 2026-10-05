@@ -156,6 +156,7 @@ export default function Lead({ id }: { id: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     setLead(null);
     setError(null);
     getLead(api, id)

@@ -42,6 +42,7 @@ export default function LeadScoringRules() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
@@ -64,7 +65,7 @@ export default function LeadScoringRules() {
           <h1 title="Each active rule checks one lead field against a comparison value; when it matches, its points are added to that lead's total score. Scores help reps and managers prioritize which leads to work first.">
             Lead Scoring Rules
           </h1>
-          <div className="sub">Config that adds up into each lead's score</div>
+          <div className="sub">Config that adds up into each lead&apos;s score</div>
         </div>
         <RoleOnly roles={["ADMIN"]}>
           <button className="btn primary" onClick={() => setShowNew(true)}>New rule</button>
@@ -163,6 +164,7 @@ function RuleModal({
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && rule) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: fetch/reset state when inputs change
       setName(rule.name);
       setFieldName(rule.field_name);
       setOperator(rule.operator);
