@@ -92,7 +92,7 @@ export default function LeadershipPanel() {
           <div className="v">{summary.team_totals.leads_qualified}</div>
         </div>
         <div className="stat">
-          <div className="k">Leads converted</div>
+          <div className="k">Closed Won</div>
           <div className="v">{summary.team_totals.leads_converted}</div>
         </div>
         <div className="stat">
@@ -117,7 +117,7 @@ export default function LeadershipPanel() {
         <div className="card">
           <div className="card-head"><h3>Rep leaderboard</h3></div>
           <table>
-            <thead><tr><th>Rep</th><th>Leads</th><th>Qualified</th><th>Converted</th><th>Emails</th><th>Calls</th></tr></thead>
+            <thead><tr><th>Rep</th><th>Leads</th><th>Qualified</th><th>Closed Won</th><th>Emails</th><th>Calls</th></tr></thead>
             <tbody>
               {summary.leaderboard.map((r) => (
                 <tr key={r.owner_employee_id ?? "unassigned"}>
