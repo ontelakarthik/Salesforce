@@ -13,7 +13,6 @@ import { ApiError, useApi } from "@/lib/api/client";
 import { useAppSelector } from "@/lib/hooks";
 import {
   deleteLead,
-  getAccount,
   getCampaign,
   getLead,
   getLeadScoreBreakdown,
@@ -121,7 +120,6 @@ export default function Lead({ id }: { id: string }) {
   const [lead, setLead] = useState<LeadOut | null>(null);
   const [sourceCampaign, setSourceCampaign] = useState<CampaignOut | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignOut[]>([]);
-  const [linkedAccount, setLinkedAccount] = useState<AccountOut | null>(null);
   const [accounts, setAccounts] = useState<AccountOut[] | null>(null);
   const [scoreBreakdown, setScoreBreakdown] = useState<LeadScoreBreakdownEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -168,13 +166,6 @@ export default function Lead({ id }: { id: string }) {
             if (!cancelled) setSourceCampaign(c);
           }).catch(() => {
             /* attribution is a nice-to-have — a missing/deleted campaign shouldn't break the page */
-          });
-        }
-        if (l.account_id) {
-          getAccount(api, l.account_id).then((a) => {
-            if (!cancelled) setLinkedAccount(a);
-          }).catch(() => {
-            /* a missing/deleted account shouldn't break the page — just shows no link */
           });
         }
         getLeadScoreBreakdown(api, id).then((entries) => {
@@ -319,7 +310,6 @@ export default function Lead({ id }: { id: string }) {
         const updated = await updateLead(api, id, payload);
         setLead(updated);
         setSourceCampaign(updated.campaign_id ? campaigns.find((c) => c.id === updated.campaign_id) ?? null : null);
-        setLinkedAccount(updated.account_id ? accounts?.find((a) => a.id === updated.account_id) ?? null : null);
         setEditingDetails(false);
       } catch (err) {
         setDetailsError(err instanceof ApiError ? err.message : "Failed to save changes.");
@@ -421,8 +411,8 @@ export default function Lead({ id }: { id: string }) {
                     <div className="field">
                       <div className="lab">Company <span className="req">*</span></div>
                       <div className="val">
-                        {lead.converted_account_id ? (
-                          <Link href={`/accounts/${lead.converted_account_id}`} className="tlink">
+                        {lead.account_id || lead.converted_account_id ? (
+                          <Link href={`/accounts/${lead.account_id || lead.converted_account_id}`} className="tlink">
                             {lead.company_name}
                           </Link>
                         ) : (
@@ -509,16 +499,6 @@ export default function Lead({ id }: { id: string }) {
                   )}
                   {isVisible("source") && (
                     <div className="field"><div className="lab">Lead source</div><div className="val">{lead.source || "—"}</div></div>
-                  )}
-                  {isVisible("account_id") && (
-                    <div className="field">
-                      <div className="lab">Account</div>
-                      <div className="val">
-                        {linkedAccount ? (
-                          <Link href={`/accounts/${linkedAccount.id}`}>{linkedAccount.legal_name}</Link>
-                        ) : "—"}
-                      </div>
-                    </div>
                   )}
                   {isVisible("campaign_id") && (
                     <div className="field"><div className="lab">Campaign</div><div className="val">{sourceCampaign ? <Badge variant="teal">{sourceCampaign.name}</Badge> : "—"}</div></div>
