@@ -2,6 +2,7 @@
 
 import { CountrySelect, StateProvinceSelect } from "../../CountryStateFields";
 import { URL_RE } from "./mock";
+import { EmployeeRangeSelect, IndustrySelect } from "../picklists";
 import type { AccountCreatePayload } from "@/lib/api/crm";
 
 /**
@@ -120,7 +121,7 @@ export function AccountFormFields({
       {isVisible("industry") && (
         <div className="field">
           <div className="lab">Industry</div>
-          <input className="inp" disabled={!isEditable("industry")} value={draft.industry} onChange={(e) => setDraft({ ...draft, industry: e.target.value })} />
+          <IndustrySelect disabled={!isEditable("industry")} value={draft.industry} onChange={(industry) => setDraft({ ...draft, industry })} />
         </div>
       )}
       {isVisible("website") && (
@@ -167,7 +168,7 @@ export function AccountFormFields({
       {isVisible("num_employees") && (
         <div className="field">
           <div className="lab">No. of employees</div>
-          <input className="inp" type="number" disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(e) => setDraft({ ...draft, num_employees: e.target.value })} />
+          <EmployeeRangeSelect disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(num_employees) => setDraft({ ...draft, num_employees })} />
         </div>
       )}
       {isVisible("account_number") && (

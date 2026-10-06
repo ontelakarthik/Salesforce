@@ -43,6 +43,7 @@ import {
   leadFieldsFromAccount,
   leadFullName,
 } from "./leadShared";
+import { EmployeeRangeSelect, employeeRangeLabel } from "./picklists";
 import { URL_RE } from "./account/mock";
 import { useFieldPermissions } from "@/lib/api/fieldPermissions";
 
@@ -495,7 +496,7 @@ export default function Lead({ id }: { id: string }) {
                     <div className="field"><div className="lab">Annual revenue</div><div className="val num">{lead.annual_revenue != null ? lead.annual_revenue.toLocaleString() : "—"}</div></div>
                   )}
                   {isVisible("num_employees") && (
-                    <div className="field"><div className="lab">No. of employees</div><div className="val num">{lead.num_employees ?? "—"}</div></div>
+                    <div className="field"><div className="lab">No. of employees</div><div className="val">{employeeRangeLabel(lead.num_employees) ?? "—"}</div></div>
                   )}
                   {isVisible("source") && (
                     <div className="field"><div className="lab">Lead source</div><div className="val">{lead.source || "—"}</div></div>
@@ -637,7 +638,7 @@ export default function Lead({ id }: { id: string }) {
                   {isVisible("num_employees") && (
                     <div className="field">
                       <div className="lab">No. of employees</div>
-                      <input className="inp" type="number" disabled={!isEditable("num_employees")} value={detailsDraft.num_employees} onChange={(e) => setDetailsDraft({ ...detailsDraft, num_employees: e.target.value })} />
+                      <EmployeeRangeSelect disabled={!isEditable("num_employees")} value={detailsDraft.num_employees} onChange={(num_employees) => setDetailsDraft({ ...detailsDraft, num_employees })} />
                     </div>
                   )}
                   {isVisible("source") && (

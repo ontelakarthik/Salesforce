@@ -8,6 +8,7 @@ import { ApiError, useApi } from "@/lib/api/client";
 import { updateAccount, type AccountOut, type AccountUpdatePayload } from "@/lib/api/crm";
 import { useFieldPermissions } from "@/lib/api/fieldPermissions";
 import { ACCOUNT_TYPE_BADGE, ACCOUNT_TYPE_LABEL, URL_RE, type AccountType } from "./mock";
+import { EmployeeRangeSelect, employeeRangeLabel } from "../picklists";
 
 function typeBadge(code: string) {
   return ACCOUNT_TYPE_BADGE[code as AccountType] ?? "gray";
@@ -192,7 +193,7 @@ export default function OverviewPanel({
             <div className="field"><div className="lab">Annual revenue</div><div className="val num">{account.annual_revenue != null ? account.annual_revenue.toLocaleString() : "—"}</div></div>
           )}
           {isVisible("num_employees") && (
-            <div className="field"><div className="lab">No. of employees</div><div className="val num">{account.num_employees ?? "—"}</div></div>
+            <div className="field"><div className="lab">No. of employees</div><div className="val">{employeeRangeLabel(account.num_employees) ?? "—"}</div></div>
           )}
           {isVisible("account_number") && (
             <div className="field"><div className="lab">Account number</div><div className="val">{account.account_number || "—"}</div></div>
@@ -317,7 +318,7 @@ export default function OverviewPanel({
         {isVisible("num_employees") && (
           <div className="field">
             <div className="lab">No. of employees</div>
-            <input className="inp" type="number" disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(e) => setDraft({ ...draft, num_employees: e.target.value })} />
+            <EmployeeRangeSelect disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(num_employees) => setDraft({ ...draft, num_employees })} />
           </div>
         )}
         {isVisible("account_number") && (

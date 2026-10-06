@@ -17,6 +17,7 @@ import { useFieldPermissions } from "@/lib/api/fieldPermissions";
 import { useAppDispatch } from "@/lib/hooks";
 import { showToast } from "@/lib/features/toastSlice";
 import { leadFieldsFromAccount } from "./leadShared";
+import { EmployeeRangeSelect, IndustrySelect, matchIndustry } from "./picklists";
 import {
   AccountFormFields,
   BLANK_ACCOUNT_DRAFT,
@@ -131,7 +132,9 @@ export default function NewLeadModal({
     setDraft((prev) => ({
       ...prev,
       account_id: accountId,
-      ...(account ? leadFieldsFromAccount(account) : {}),
+      ...(account
+        ? { ...leadFieldsFromAccount(account), industry: matchIndustry(account.industry) }
+        : {}),
     }));
   }
 
@@ -346,7 +349,7 @@ export default function NewLeadModal({
         {isVisible("industry") && accountMode === "existing" && (
           <div className="field">
             <div className="lab">Industry</div>
-            <input className="inp" disabled={!isEditable("industry")} value={draft.industry} onChange={(e) => setDraft({ ...draft, industry: e.target.value })} />
+            <IndustrySelect disabled={!isEditable("industry")} value={draft.industry} onChange={(industry) => setDraft({ ...draft, industry })} />
           </div>
         )}
         {isVisible("rating") && accountMode === "existing" && (
@@ -405,7 +408,7 @@ export default function NewLeadModal({
         {isVisible("num_employees") && accountMode === "existing" && (
           <div className="field">
             <div className="lab">No. of employees</div>
-            <input className="inp" type="number" disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(e) => setDraft({ ...draft, num_employees: e.target.value })} />
+            <EmployeeRangeSelect disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(num_employees) => setDraft({ ...draft, num_employees })} />
           </div>
         )}
 
