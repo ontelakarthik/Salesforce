@@ -101,6 +101,13 @@ class Account(Base, AuditMixin, SoftDeleteMixin):
     billing_state_province: Mapped[str | None] = mapped_column(String(60), nullable=True)
     shipping_country: Mapped[str | None] = mapped_column(String(60), nullable=True)
     shipping_state_province: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    # Structured address parts. `address` is the Billing Street and
+    # `shipping_address` the Shipping Street (the columns pre-date the
+    # structured form, so existing free-text values simply read as the street).
+    billing_city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    billing_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    shipping_city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    shipping_postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     annual_revenue: Mapped[float | None] = mapped_column(Numeric(14, 2), nullable=True)
     num_employees: Mapped[int | None] = mapped_column(nullable=True)
     ownership: Mapped[str | None] = mapped_column(String(30), nullable=True)  # PUBLIC/PRIVATE/SUBSIDIARY/OTHER
@@ -338,6 +345,9 @@ class Lead(Base, AuditMixin, SoftDeleteMixin):
     # crm_service._lead_out()) so it can never go stale.
     country: Mapped[str | None] = mapped_column(String(60), nullable=True)
     state_province: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    # `address` above is the Street; city/postal_code complete the structured address.
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     description: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     do_not_call: Mapped[bool] = mapped_column(Boolean, default=False)
     email_opt_out: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -677,6 +687,10 @@ class AccountCreate(BaseModel):
     billing_state_province: str | None = Field(default=None, max_length=60)
     shipping_country: str | None = Field(default=None, description="USA | Canada")
     shipping_state_province: str | None = Field(default=None, max_length=60)
+    billing_city: str | None = Field(default=None, max_length=100)
+    billing_postal_code: str | None = Field(default=None, max_length=20)
+    shipping_city: str | None = Field(default=None, max_length=100)
+    shipping_postal_code: str | None = Field(default=None, max_length=20)
     annual_revenue: float | None = None
     num_employees: int | None = None
     ownership: str | None = Field(default=None, description="PUBLIC | PRIVATE | SUBSIDIARY | OTHER")
@@ -701,6 +715,10 @@ class AccountUpdate(BaseModel):
     billing_state_province: str | None = Field(default=None, max_length=60)
     shipping_country: str | None = Field(default=None, description="USA | Canada")
     shipping_state_province: str | None = Field(default=None, max_length=60)
+    billing_city: str | None = Field(default=None, max_length=100)
+    billing_postal_code: str | None = Field(default=None, max_length=20)
+    shipping_city: str | None = Field(default=None, max_length=100)
+    shipping_postal_code: str | None = Field(default=None, max_length=20)
     annual_revenue: float | None = None
     num_employees: int | None = None
     ownership: str | None = Field(default=None, description="PUBLIC | PRIVATE | SUBSIDIARY | OTHER")
@@ -733,6 +751,10 @@ class AccountOut(AuditOut):
     region: str | None = None
     shipping_country: str | None = None
     shipping_state_province: str | None = None
+    billing_city: str | None = None
+    billing_postal_code: str | None = None
+    shipping_city: str | None = None
+    shipping_postal_code: str | None = None
     annual_revenue: float | None = None
     num_employees: int | None = None
     ownership: str | None = None
@@ -1081,6 +1103,8 @@ class LeadCreate(BaseModel):
     address: str | None = Field(default=None, max_length=500)
     country: str | None = Field(default=None, description="USA | Canada")
     state_province: str | None = Field(default=None, max_length=60)
+    city: str | None = Field(default=None, max_length=100)
+    postal_code: str | None = Field(default=None, max_length=20)
     description: str | None = Field(default=None, max_length=2000)
     do_not_call: bool = False
     email_opt_out: bool = False
@@ -1123,6 +1147,8 @@ class LeadUpdate(BaseModel):
     address: str | None = Field(default=None, max_length=500)
     country: str | None = Field(default=None, description="USA | Canada")
     state_province: str | None = Field(default=None, max_length=60)
+    city: str | None = Field(default=None, max_length=100)
+    postal_code: str | None = Field(default=None, max_length=20)
     description: str | None = Field(default=None, max_length=2000)
     do_not_call: bool | None = None
     email_opt_out: bool | None = None
@@ -1168,6 +1194,8 @@ class LeadOut(AuditOut):
     address: str | None = None
     country: str | None = None
     state_province: str | None = None
+    city: str | None = None
+    postal_code: str | None = None
     # Never a stored column — always freshly derived from country +
     # state_province (see src/utils/geo.py:derive_region()) so it can never
     # drift out of sync with them. Read-only: not settable via

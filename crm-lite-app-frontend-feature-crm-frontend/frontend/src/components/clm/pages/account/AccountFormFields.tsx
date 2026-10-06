@@ -1,8 +1,8 @@
 "use client";
 
-import { CountrySelect, StateProvinceSelect } from "../../CountryStateFields";
 import { URL_RE } from "./mock";
 import { EmployeeRangeSelect, IndustrySelect } from "../picklists";
+import { AddressSection } from "../AddressSection";
 import type { AccountCreatePayload } from "@/lib/api/crm";
 
 /**
@@ -23,6 +23,10 @@ export interface AccountDraft {
   shipping_address: string;
   shipping_country: string;
   shipping_state_province: string;
+  billing_city: string;
+  billing_postal_code: string;
+  shipping_city: string;
+  shipping_postal_code: string;
   annual_revenue: string;
   num_employees: string;
   ownership: string;
@@ -45,6 +49,10 @@ export const BLANK_ACCOUNT_DRAFT: AccountDraft = {
   shipping_address: "",
   shipping_country: "",
   shipping_state_province: "",
+  billing_city: "",
+  billing_postal_code: "",
+  shipping_city: "",
+  shipping_postal_code: "",
   annual_revenue: "",
   num_employees: "",
   ownership: "",
@@ -79,6 +87,10 @@ export function accountDraftToPayload(d: AccountDraft): AccountCreatePayload {
     shipping_address: d.shipping_address.trim() || null,
     shipping_country: d.shipping_country || null,
     shipping_state_province: d.shipping_state_province || null,
+    billing_city: d.billing_city.trim() || null,
+    billing_postal_code: d.billing_postal_code.trim() || null,
+    shipping_city: d.shipping_city.trim() || null,
+    shipping_postal_code: d.shipping_postal_code.trim() || null,
     annual_revenue: d.annual_revenue.trim() ? Number(d.annual_revenue) : null,
     num_employees: d.num_employees.trim() ? Number(d.num_employees) : null,
     ownership: d.ownership || null,
@@ -183,60 +195,74 @@ export function AccountFormFields({
           <input className="inp" disabled={!isEditable("sic_code")} value={draft.sic_code} onChange={(e) => setDraft({ ...draft, sic_code: e.target.value })} />
         </div>
       )}
-      {isVisible("billing_country") && (
-        <div className="field">
-          <div className="lab">Billing country</div>
-          <CountrySelect
-            disabled={!isEditable("billing_country")}
-            value={draft.billing_country}
-            onChange={(billing_country) => setDraft({ ...draft, billing_country, billing_state_province: "" })}
-          />
-        </div>
-      )}
-      {isVisible("billing_state_province") && (
-        <div className="field">
-          <div className="lab">Billing state/province</div>
-          <StateProvinceSelect
-            country={draft.billing_country}
-            disabled={!isEditable("billing_state_province")}
-            value={draft.billing_state_province}
-            onChange={(billing_state_province) => setDraft({ ...draft, billing_state_province })}
-          />
-        </div>
-      )}
-      {isVisible("address") && (
-        <div className="field" style={{ gridColumn: "1 / -1" }}>
-          <div className="lab">Billing address</div>
-          <textarea className="inp" disabled={!isEditable("address")} value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-        </div>
-      )}
-      {isVisible("shipping_country") && (
-        <div className="field">
-          <div className="lab">Shipping country</div>
-          <CountrySelect
-            disabled={!isEditable("shipping_country")}
-            value={draft.shipping_country}
-            onChange={(shipping_country) => setDraft({ ...draft, shipping_country, shipping_state_province: "" })}
-          />
-        </div>
-      )}
-      {isVisible("shipping_state_province") && (
-        <div className="field">
-          <div className="lab">Shipping state/province</div>
-          <StateProvinceSelect
-            country={draft.shipping_country}
-            disabled={!isEditable("shipping_state_province")}
-            value={draft.shipping_state_province}
-            onChange={(shipping_state_province) => setDraft({ ...draft, shipping_state_province })}
-          />
-        </div>
-      )}
-      {isVisible("shipping_address") && (
-        <div className="field" style={{ gridColumn: "1 / -1" }}>
-          <div className="lab">Shipping address</div>
-          <textarea className="inp" disabled={!isEditable("shipping_address")} value={draft.shipping_address} onChange={(e) => setDraft({ ...draft, shipping_address: e.target.value })} />
-        </div>
-      )}
+      <AddressSection
+        title="Billing address"
+        labels={{
+          street: "Billing street",
+          city: "Billing city",
+          state_province: "Billing state/province",
+          country: "Billing country",
+          postal_code: "Billing zip/postal code",
+        }}
+        fields={{
+          street: "address",
+          city: "billing_city",
+          state_province: "billing_state_province",
+          country: "billing_country",
+          postal_code: "billing_postal_code",
+        }}
+        values={{
+          street: draft.address,
+          city: draft.billing_city,
+          state_province: draft.billing_state_province,
+          country: draft.billing_country,
+          postal_code: draft.billing_postal_code,
+        }}
+        onChange={(a) => setDraft({
+          ...draft,
+          address: a.street,
+          billing_city: a.city,
+          billing_state_province: a.state_province,
+          billing_country: a.country,
+          billing_postal_code: a.postal_code,
+        })}
+        isVisible={isVisible}
+        isEditable={isEditable}
+      />
+      <AddressSection
+        title="Shipping address"
+        labels={{
+          street: "Shipping street",
+          city: "Shipping city",
+          state_province: "Shipping state/province",
+          country: "Shipping country",
+          postal_code: "Shipping zip/postal code",
+        }}
+        fields={{
+          street: "shipping_address",
+          city: "shipping_city",
+          state_province: "shipping_state_province",
+          country: "shipping_country",
+          postal_code: "shipping_postal_code",
+        }}
+        values={{
+          street: draft.shipping_address,
+          city: draft.shipping_city,
+          state_province: draft.shipping_state_province,
+          country: draft.shipping_country,
+          postal_code: draft.shipping_postal_code,
+        }}
+        onChange={(a) => setDraft({
+          ...draft,
+          shipping_address: a.street,
+          shipping_city: a.city,
+          shipping_state_province: a.state_province,
+          shipping_country: a.country,
+          shipping_postal_code: a.postal_code,
+        })}
+        isVisible={isVisible}
+        isEditable={isEditable}
+      />
       {isVisible("description") && (
         <div className="field" style={{ gridColumn: "1 / -1" }}>
           <div className="lab">Description</div>

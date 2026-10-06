@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Modal from "../Modal";
-import { CountrySelect, StateProvinceSelect } from "../CountryStateFields";
 import { ApiError, useApi } from "@/lib/api/client";
 import {
   createAccount,
@@ -18,6 +17,7 @@ import { useAppDispatch } from "@/lib/hooks";
 import { showToast } from "@/lib/features/toastSlice";
 import { leadFieldsFromAccount } from "./leadShared";
 import { EmployeeRangeSelect, IndustrySelect, matchIndustry } from "./picklists";
+import { AddressSection } from "./AddressSection";
 import {
   AccountFormFields,
   BLANK_ACCOUNT_DRAFT,
@@ -53,6 +53,8 @@ interface Draft {
   address: string;
   country: string;
   state_province: string;
+  city: string;
+  postal_code: string;
   description: string;
   do_not_call: boolean;
   email_opt_out: boolean;
@@ -79,6 +81,8 @@ const BLANK: Draft = {
   address: "",
   country: "",
   state_province: "",
+  city: "",
+  postal_code: "",
   description: "",
   do_not_call: false,
   email_opt_out: false,
@@ -133,7 +137,12 @@ export default function NewLeadModal({
       ...prev,
       account_id: accountId,
       ...(account
-        ? { ...leadFieldsFromAccount(account), industry: matchIndustry(account.industry) }
+        ? {
+            ...leadFieldsFromAccount(account),
+            industry: matchIndustry(account.industry),
+            city: account.billing_city ?? "",
+            postal_code: account.billing_postal_code ?? "",
+          }
         : {}),
     }));
   }
@@ -185,6 +194,8 @@ export default function NewLeadModal({
             address: fields.address || null,
             country: fields.country || null,
             state_province: fields.state_province || null,
+            city: createdAccount.billing_city || null,
+            postal_code: createdAccount.billing_postal_code || null,
             annual_revenue: fields.annual_revenue ? Number(fields.annual_revenue) : null,
             num_employees: fields.num_employees ? Number(fields.num_employees) : null,
             rating: fields.rating || null,
@@ -211,6 +222,8 @@ export default function NewLeadModal({
           address: draft.address.trim() || null,
           country: draft.country || null,
           state_province: draft.state_province || null,
+          city: draft.city.trim() || null,
+          postal_code: draft.postal_code.trim() || null,
           description: draft.description.trim() || null,
           do_not_call: draft.do_not_call,
           email_opt_out: draft.email_opt_out,
@@ -357,32 +370,41 @@ export default function NewLeadModal({
         </div>
       )}
 
-      {isVisible("country") && accountMode === "existing" && (
-        <div className="field">
-          <div className="lab">Country</div>
-          <CountrySelect
-            disabled={!isEditable("country")}
-            value={draft.country}
-            onChange={(country) => setDraft({ ...draft, country, state_province: "" })}
-          />
-        </div>
-      )}
-      {isVisible("state_province") && accountMode === "existing" && (
-        <div className="field">
-          <div className="lab">State/Province</div>
-          <StateProvinceSelect
-            country={draft.country}
-            disabled={!isEditable("state_province")}
-            value={draft.state_province}
-            onChange={(state_province) => setDraft({ ...draft, state_province })}
-          />
-        </div>
-      )}
-      {isVisible("address") && accountMode === "existing" && (
-        <div className="field" style={{ gridColumn: "1 / -1" }}>
-          <div className="lab">Address</div>
-          <input className="inp" disabled={!isEditable("address")} value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-        </div>
+      {accountMode === "existing" && (
+        <AddressSection
+          title="Address"
+          labels={{
+            street: "Street",
+            city: "City",
+            state_province: "State/Province",
+            country: "Country",
+            postal_code: "Postal code",
+          }}
+          fields={{
+            street: "address",
+            city: "city",
+            state_province: "state_province",
+            country: "country",
+            postal_code: "postal_code",
+          }}
+          values={{
+            street: draft.address,
+            city: draft.city,
+            state_province: draft.state_province,
+            country: draft.country,
+            postal_code: draft.postal_code,
+          }}
+          onChange={(a) => setDraft({
+            ...draft,
+            address: a.street,
+            city: a.city,
+            state_province: a.state_province,
+            country: a.country,
+            postal_code: a.postal_code,
+          })}
+          isVisible={isVisible}
+          isEditable={isEditable}
+        />
       )}
       {isVisible("description") && (
         <div className="field" style={{ gridColumn: "1 / -1" }}>

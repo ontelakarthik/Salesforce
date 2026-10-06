@@ -279,6 +279,8 @@ def _out(row: Account, type_map: dict[int, str] | None = None,
         billing_country=row.billing_country, billing_state_province=row.billing_state_province,
         region=geo.derive_region(row.billing_country, row.billing_state_province),
         shipping_country=row.shipping_country, shipping_state_province=row.shipping_state_province,
+        billing_city=row.billing_city, billing_postal_code=row.billing_postal_code,
+        shipping_city=row.shipping_city, shipping_postal_code=row.shipping_postal_code,
         annual_revenue=row.annual_revenue, num_employees=row.num_employees,
         ownership=row.ownership, ticker_symbol=row.ticker_symbol, rating=row.rating,
         account_number=row.account_number, sic_code=row.sic_code, description=row.description,
@@ -340,19 +342,22 @@ def _validate_owner(employees: EmployeeRepository, owner_employee_id) -> None:
             400)
 
 
-#: Shipping defaults to Billing — Country + State/Province + Address as one
-#: unit, not just the free-text address — whenever Shipping Address is empty
-#: (an account with no Billing Address to copy leaves Shipping empty too, and
-#: an already-set Shipping Address, whether persisted or supplied on this
-#: same call, is never overwritten). Shared by create_account()/
-#: update_account() so the rule can't drift between the two.
+#: Shipping defaults to Billing — Country + State/Province + Street + City +
+#: Postal Code as one unit, not just the street — whenever Shipping is empty
+#: (an account with no Billing address to copy leaves Shipping empty too, and
+#: an already-set Shipping street/city/postal code, whether persisted or
+#: supplied on this same call, is never overwritten). Shared by
+#: create_account()/update_account() so the rule can't drift between the two.
+#: Each argument is (country, state_province, street, city, postal_code).
 def _billing_to_shipping_defaults(
-    billing_country: str | None, billing_state_province: str | None, billing_address: str | None,
-    shipping_country: str | None, shipping_state_province: str | None, shipping_address: str | None,
-) -> tuple[str | None, str | None, str | None]:
-    if shipping_address or not billing_address:
-        return shipping_country, shipping_state_province, shipping_address
-    return billing_country, billing_state_province, billing_address
+    billing: tuple[str | None, str | None, str | None, str | None, str | None],
+    shipping: tuple[str | None, str | None, str | None, str | None, str | None],
+) -> tuple[str | None, str | None, str | None, str | None, str | None]:
+    billing_has_address = any(billing[2:])
+    shipping_has_address = any(shipping[2:])
+    if shipping_has_address or not billing_has_address:
+        return shipping
+    return billing
 
 
 @handle_errors("create account")
@@ -364,9 +369,12 @@ def create_account(
     _validate_owner(employees, payload.owner_employee_id)
     geo.validate_country_state_province(payload.billing_country, payload.billing_state_province)
     geo.validate_country_state_province(payload.shipping_country, payload.shipping_state_province)
-    shipping_country, shipping_state_province, shipping_address = _billing_to_shipping_defaults(
-        payload.billing_country, payload.billing_state_province, payload.address,
-        payload.shipping_country, payload.shipping_state_province, payload.shipping_address,
+    (shipping_country, shipping_state_province, shipping_address,
+     shipping_city, shipping_postal_code) = _billing_to_shipping_defaults(
+        (payload.billing_country, payload.billing_state_province, payload.address,
+         payload.billing_city, payload.billing_postal_code),
+        (payload.shipping_country, payload.shipping_state_province, payload.shipping_address,
+         payload.shipping_city, payload.shipping_postal_code),
     )
     # See create_lead()'s identical comment: a rep creating an account with
     # no explicit owner becomes its owner, so it isn't immediately outside
@@ -389,6 +397,8 @@ def create_account(
         "shipping_address": shipping_address,
         "billing_country": payload.billing_country, "billing_state_province": payload.billing_state_province,
         "shipping_country": shipping_country, "shipping_state_province": shipping_state_province,
+        "billing_city": payload.billing_city, "billing_postal_code": payload.billing_postal_code,
+        "shipping_city": shipping_city, "shipping_postal_code": shipping_postal_code,
         "annual_revenue": payload.annual_revenue,
         "num_employees": payload.num_employees, "ownership": payload.ownership,
         "ticker_symbol": payload.ticker_symbol, "rating": payload.rating,
@@ -439,15 +449,22 @@ def update_account(
     # against the resulting (patched-or-existing) values so it still fires
     # when e.g. Billing Address is added on a patch that leaves Shipping
     # untouched — see _billing_to_shipping_defaults()'s docstring.
-    changes["shipping_country"], changes["shipping_state_province"], changes["shipping_address"] = (
-        _billing_to_shipping_defaults(
+    (changes["shipping_country"], changes["shipping_state_province"], changes["shipping_address"],
+     changes["shipping_city"], changes["shipping_postal_code"]) = _billing_to_shipping_defaults(
+        (
             changes.get("billing_country", row.billing_country),
             changes.get("billing_state_province", row.billing_state_province),
             changes.get("address", row.address),
+            changes.get("billing_city", row.billing_city),
+            changes.get("billing_postal_code", row.billing_postal_code),
+        ),
+        (
             changes.get("shipping_country", row.shipping_country),
             changes.get("shipping_state_province", row.shipping_state_province),
             changes.get("shipping_address", row.shipping_address),
-        )
+            changes.get("shipping_city", row.shipping_city),
+            changes.get("shipping_postal_code", row.shipping_postal_code),
+        ),
     )
     changes["updated_by"] = user.employee_id
     updated = repo.update(cid, **changes)
@@ -1006,6 +1023,7 @@ def _lead_out(row: Lead, user: CurrentUser | None = None,
         website=row.website, linkedin_url=row.linkedin_url, industry=row.industry,
         rating=row.rating, annual_revenue=row.annual_revenue, num_employees=row.num_employees,
         address=row.address, country=row.country, state_province=row.state_province,
+        city=row.city, postal_code=row.postal_code,
         region=geo.derive_region(row.country, row.state_province),
         description=row.description,
         do_not_call=row.do_not_call, email_opt_out=row.email_opt_out,
@@ -1213,6 +1231,7 @@ def create_lead(user: CurrentUser, repo: LeadRepository, employees: EmployeeRepo
         "rating": payload.rating, "annual_revenue": payload.annual_revenue,
         "num_employees": payload.num_employees, "address": payload.address,
         "country": payload.country, "state_province": payload.state_province,
+        "city": payload.city, "postal_code": payload.postal_code,
         "description": payload.description, "do_not_call": payload.do_not_call,
         "email_opt_out": payload.email_opt_out, "source": payload.source,
     }, fls)
@@ -1652,7 +1671,7 @@ _FLS_FIELDS: dict[str, set[str]] = {
         "company_name", "salutation", "first_name", "last_name", "title",
         "contact_email", "contact_phone", "mobile_phone", "website", "linkedin_url",
         "industry", "rating", "annual_revenue", "num_employees", "address",
-        "country", "state_province",
+        "country", "state_province", "city", "postal_code",
         "description", "do_not_call", "email_opt_out", "source", "campaign_id",
         "account_id",
     },
@@ -1660,6 +1679,7 @@ _FLS_FIELDS: dict[str, set[str]] = {
         "legal_name", "account_site", "industry", "website", "phone", "address",
         "shipping_address", "billing_country", "billing_state_province",
         "shipping_country", "shipping_state_province",
+        "billing_city", "billing_postal_code", "shipping_city", "shipping_postal_code",
         "annual_revenue", "num_employees", "ownership",
         "ticker_symbol", "rating", "account_number", "sic_code", "description",
         "parent_account_id",

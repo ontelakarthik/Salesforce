@@ -36,6 +36,10 @@ export interface AccountOut {
   region: string | null;
   shipping_country: string | null;
   shipping_state_province: string | null;
+  billing_city: string | null;
+  billing_postal_code: string | null;
+  shipping_city: string | null;
+  shipping_postal_code: string | null;
   annual_revenue: number | null;
   num_employees: number | null;
   ownership: string | null;
@@ -73,6 +77,10 @@ export interface AccountUpdatePayload {
   billing_state_province?: string | null;
   shipping_country?: string | null;
   shipping_state_province?: string | null;
+  billing_city?: string | null;
+  billing_postal_code?: string | null;
+  shipping_city?: string | null;
+  shipping_postal_code?: string | null;
   annual_revenue?: number | null;
   num_employees?: number | null;
   ownership?: string | null;
@@ -484,6 +492,8 @@ export interface LeadOut {
   // (backend crm_service._lead_out()) and only ever appears in responses.
   country: string | null;
   state_province: string | null;
+  city: string | null;
+  postal_code: string | null;
   region: string | null;
   description: string | null;
   do_not_call: boolean | null;
@@ -524,6 +534,8 @@ export interface LeadCreatePayload {
   address?: string | null;
   country?: string | null;
   state_province?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
   description?: string | null;
   do_not_call?: boolean;
   email_opt_out?: boolean;
