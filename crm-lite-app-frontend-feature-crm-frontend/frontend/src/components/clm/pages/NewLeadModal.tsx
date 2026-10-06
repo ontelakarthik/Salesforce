@@ -232,6 +232,180 @@ export default function NewLeadModal({
     });
   }
 
+  // Lead-level fields. In "Create New Account" mode they render inside their own
+  // outlined "Lead details" section (below the Account fields); in "Select Existing
+  // Account" mode they render straight into the form grid, as before.
+  const leadFields = (
+    <>
+      {isVisible("salutation") && (
+        <div className="field">
+          <div className="lab">Salutation</div>
+          <select className="inp" disabled={!isEditable("salutation")} value={draft.salutation}
+                 onChange={(e) => setDraft({ ...draft, salutation: e.target.value })}>
+            {SALUTATIONS.map((s) => <option key={s} value={s}>{s || "—"}</option>)}
+          </select>
+        </div>
+      )}
+      {isVisible("first_name") && (
+        <div className="field">
+          <div className="lab">First name</div>
+          <input className="inp" disabled={!isEditable("first_name")} value={draft.first_name}
+                onChange={(e) => setDraft({ ...draft, first_name: e.target.value })} autoFocus />
+        </div>
+      )}
+      <div className="field">
+        <div className="lab">Last name <span className="req">*</span></div>
+        <input className="inp" value={draft.last_name} onChange={(e) => setDraft({ ...draft, last_name: e.target.value })} />
+        {errors.last_name && <div className="help err">{errors.last_name}</div>}
+      </div>
+
+      {accountMode === "existing" && (
+        <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <div className="lab">Company <span className="req">*</span></div>
+          <input className="inp" value={draft.company_name} onChange={(e) => setDraft({ ...draft, company_name: e.target.value })} />
+          {errors.company_name && <div className="help err">{errors.company_name}</div>}
+        </div>
+      )}
+
+      {isVisible("title") && (
+        <div className="field">
+          <div className="lab">Title</div>
+          <input className="inp" disabled={!isEditable("title")} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+        </div>
+      )}
+      {isVisible("industry") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">Industry</div>
+          <IndustrySelect disabled={!isEditable("industry")} value={draft.industry} onChange={(industry) => setDraft({ ...draft, industry })} />
+        </div>
+      )}
+      {isVisible("rating") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">Rating</div>
+          <select className="inp" disabled={!isEditable("rating")} value={draft.rating} onChange={(e) => setDraft({ ...draft, rating: e.target.value })}>
+            {RATINGS.map((r) => <option key={r} value={r}>{r || "—"}</option>)}
+          </select>
+        </div>
+      )}
+
+      {isVisible("contact_email") && (
+        <div className="field">
+          <div className="lab">Email <span className="req">*</span></div>
+          <input className="inp" type="email" disabled={!isEditable("contact_email")} value={draft.contact_email} onChange={(e) => setDraft({ ...draft, contact_email: e.target.value })} />
+          {errors.contact_email && <div className="help err">{errors.contact_email}</div>}
+        </div>
+      )}
+      {isVisible("contact_phone") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">Phone</div>
+          <input className="inp" disabled={!isEditable("contact_phone")} value={draft.contact_phone} onChange={(e) => setDraft({ ...draft, contact_phone: e.target.value })} />
+        </div>
+      )}
+      {isVisible("mobile_phone") && (
+        <div className="field">
+          <div className="lab">Mobile</div>
+          <input className="inp" disabled={!isEditable("mobile_phone")} value={draft.mobile_phone} onChange={(e) => setDraft({ ...draft, mobile_phone: e.target.value })} />
+        </div>
+      )}
+
+      {isVisible("website") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">Website</div>
+          <input className="inp" disabled={!isEditable("website")} value={draft.website} onChange={(e) => setDraft({ ...draft, website: e.target.value })} />
+        </div>
+      )}
+      {isVisible("linkedin_url") && (
+        <div className="field">
+          <div className="lab">LinkedIn URL</div>
+          <input
+            className="inp"
+            disabled={!isEditable("linkedin_url")}
+            value={draft.linkedin_url}
+            onChange={(e) => setDraft({ ...draft, linkedin_url: e.target.value })}
+            placeholder="https://www.linkedin.com/in/..."
+          />
+        </div>
+      )}
+      {isVisible("annual_revenue") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">Annual revenue</div>
+          <input className="inp" type="number" disabled={!isEditable("annual_revenue")} value={draft.annual_revenue} onChange={(e) => setDraft({ ...draft, annual_revenue: e.target.value })} />
+        </div>
+      )}
+      {isVisible("num_employees") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">No. of employees</div>
+          <EmployeeRangeSelect disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(num_employees) => setDraft({ ...draft, num_employees })} />
+        </div>
+      )}
+
+      {isVisible("source") && (
+        <div className="field">
+          <div className="lab">Lead source</div>
+          <select className="inp" disabled={!isEditable("source")} value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value })}>
+            {LEAD_SOURCES.map((s) => <option key={s} value={s}>{s || "—"}</option>)}
+          </select>
+        </div>
+      )}
+      {isVisible("campaign_id") && (
+        <div className="field" style={{ gridColumn: "2 / -1" }}>
+          <div className="lab">Campaign</div>
+          <select className="inp" disabled={!isEditable("campaign_id")} value={draft.campaign_id} onChange={(e) => setDraft({ ...draft, campaign_id: e.target.value })}>
+            <option value="">None</option>
+            {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      )}
+
+      {isVisible("country") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">Country</div>
+          <CountrySelect
+            disabled={!isEditable("country")}
+            value={draft.country}
+            onChange={(country) => setDraft({ ...draft, country, state_province: "" })}
+          />
+        </div>
+      )}
+      {isVisible("state_province") && accountMode === "existing" && (
+        <div className="field">
+          <div className="lab">State/Province</div>
+          <StateProvinceSelect
+            country={draft.country}
+            disabled={!isEditable("state_province")}
+            value={draft.state_province}
+            onChange={(state_province) => setDraft({ ...draft, state_province })}
+          />
+        </div>
+      )}
+      {isVisible("address") && accountMode === "existing" && (
+        <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <div className="lab">Address</div>
+          <input className="inp" disabled={!isEditable("address")} value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
+        </div>
+      )}
+      {isVisible("description") && (
+        <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <div className="lab">Description</div>
+          <textarea className="inp" rows={3} disabled={!isEditable("description")} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+        </div>
+      )}
+
+      {isVisible("do_not_call") && (
+        <div className="field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" disabled={!isEditable("do_not_call")} checked={draft.do_not_call} onChange={(e) => setDraft({ ...draft, do_not_call: e.target.checked })} id="lead-dnc" />
+          <label htmlFor="lead-dnc" className="lab" style={{ margin: 0 }}>Do not call</label>
+        </div>
+      )}
+      {isVisible("email_opt_out") && (
+        <div className="field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" disabled={!isEditable("email_opt_out")} checked={draft.email_opt_out} onChange={(e) => setDraft({ ...draft, email_opt_out: e.target.checked })} id="lead-optout" />
+          <label htmlFor="lead-optout" className="lab" style={{ margin: 0 }}>Email opt out</label>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <Modal
       open={open}
@@ -310,171 +484,25 @@ export default function NewLeadModal({
             />
           </div>
         )}
-        {isVisible("salutation") && (
-          <div className="field">
-            <div className="lab">Salutation</div>
-            <select className="inp" disabled={!isEditable("salutation")} value={draft.salutation}
-                   onChange={(e) => setDraft({ ...draft, salutation: e.target.value })}>
-              {SALUTATIONS.map((s) => <option key={s} value={s}>{s || "—"}</option>)}
-            </select>
-          </div>
-        )}
-        {isVisible("first_name") && (
-          <div className="field">
-            <div className="lab">First name</div>
-            <input className="inp" disabled={!isEditable("first_name")} value={draft.first_name}
-                  onChange={(e) => setDraft({ ...draft, first_name: e.target.value })} autoFocus />
-          </div>
-        )}
-        <div className="field">
-          <div className="lab">Last name <span className="req">*</span></div>
-          <input className="inp" value={draft.last_name} onChange={(e) => setDraft({ ...draft, last_name: e.target.value })} />
-          {errors.last_name && <div className="help err">{errors.last_name}</div>}
-        </div>
-
-        {accountMode === "existing" && (
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
-            <div className="lab">Company <span className="req">*</span></div>
-            <input className="inp" value={draft.company_name} onChange={(e) => setDraft({ ...draft, company_name: e.target.value })} />
-            {errors.company_name && <div className="help err">{errors.company_name}</div>}
-          </div>
-        )}
-
-        {isVisible("title") && (
-          <div className="field">
-            <div className="lab">Title</div>
-            <input className="inp" disabled={!isEditable("title")} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
-          </div>
-        )}
-        {isVisible("industry") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">Industry</div>
-            <IndustrySelect disabled={!isEditable("industry")} value={draft.industry} onChange={(industry) => setDraft({ ...draft, industry })} />
-          </div>
-        )}
-        {isVisible("rating") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">Rating</div>
-            <select className="inp" disabled={!isEditable("rating")} value={draft.rating} onChange={(e) => setDraft({ ...draft, rating: e.target.value })}>
-              {RATINGS.map((r) => <option key={r} value={r}>{r || "—"}</option>)}
-            </select>
-          </div>
-        )}
-
-        {isVisible("contact_email") && (
-          <div className="field">
-            <div className="lab">Email <span className="req">*</span></div>
-            <input className="inp" type="email" disabled={!isEditable("contact_email")} value={draft.contact_email} onChange={(e) => setDraft({ ...draft, contact_email: e.target.value })} />
-            {errors.contact_email && <div className="help err">{errors.contact_email}</div>}
-          </div>
-        )}
-        {isVisible("contact_phone") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">Phone</div>
-            <input className="inp" disabled={!isEditable("contact_phone")} value={draft.contact_phone} onChange={(e) => setDraft({ ...draft, contact_phone: e.target.value })} />
-          </div>
-        )}
-        {isVisible("mobile_phone") && (
-          <div className="field">
-            <div className="lab">Mobile</div>
-            <input className="inp" disabled={!isEditable("mobile_phone")} value={draft.mobile_phone} onChange={(e) => setDraft({ ...draft, mobile_phone: e.target.value })} />
-          </div>
-        )}
-
-        {isVisible("website") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">Website</div>
-            <input className="inp" disabled={!isEditable("website")} value={draft.website} onChange={(e) => setDraft({ ...draft, website: e.target.value })} />
-          </div>
-        )}
-        {isVisible("linkedin_url") && (
-          <div className="field">
-            <div className="lab">LinkedIn URL</div>
-            <input
-              className="inp"
-              disabled={!isEditable("linkedin_url")}
-              value={draft.linkedin_url}
-              onChange={(e) => setDraft({ ...draft, linkedin_url: e.target.value })}
-              placeholder="https://www.linkedin.com/in/..."
-            />
-          </div>
-        )}
-        {isVisible("annual_revenue") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">Annual revenue</div>
-            <input className="inp" type="number" disabled={!isEditable("annual_revenue")} value={draft.annual_revenue} onChange={(e) => setDraft({ ...draft, annual_revenue: e.target.value })} />
-          </div>
-        )}
-        {isVisible("num_employees") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">No. of employees</div>
-            <EmployeeRangeSelect disabled={!isEditable("num_employees")} value={draft.num_employees} onChange={(num_employees) => setDraft({ ...draft, num_employees })} />
-          </div>
-        )}
-
-        {isVisible("source") && (
-          <div className="field">
-            <div className="lab">Lead source</div>
-            <select className="inp" disabled={!isEditable("source")} value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value })}>
-              {LEAD_SOURCES.map((s) => <option key={s} value={s}>{s || "—"}</option>)}
-            </select>
-          </div>
-        )}
-        {isVisible("campaign_id") && (
-          <div className="field" style={{ gridColumn: "2 / -1" }}>
-            <div className="lab">Campaign</div>
-            <select className="inp" disabled={!isEditable("campaign_id")} value={draft.campaign_id} onChange={(e) => setDraft({ ...draft, campaign_id: e.target.value })}>
-              <option value="">None</option>
-              {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-        )}
-
-        {isVisible("country") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">Country</div>
-            <CountrySelect
-              disabled={!isEditable("country")}
-              value={draft.country}
-              onChange={(country) => setDraft({ ...draft, country, state_province: "" })}
-            />
-          </div>
-        )}
-        {isVisible("state_province") && accountMode === "existing" && (
-          <div className="field">
-            <div className="lab">State/Province</div>
-            <StateProvinceSelect
-              country={draft.country}
-              disabled={!isEditable("state_province")}
-              value={draft.state_province}
-              onChange={(state_province) => setDraft({ ...draft, state_province })}
-            />
-          </div>
-        )}
-        {isVisible("address") && accountMode === "existing" && (
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
-            <div className="lab">Address</div>
-            <input className="inp" disabled={!isEditable("address")} value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
-          </div>
-        )}
-        {isVisible("description") && (
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
-            <div className="lab">Description</div>
-            <textarea className="inp" rows={3} disabled={!isEditable("description")} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
-          </div>
-        )}
-
-        {isVisible("do_not_call") && (
-          <div className="field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <input type="checkbox" disabled={!isEditable("do_not_call")} checked={draft.do_not_call} onChange={(e) => setDraft({ ...draft, do_not_call: e.target.checked })} id="lead-dnc" />
-            <label htmlFor="lead-dnc" className="lab" style={{ margin: 0 }}>Do not call</label>
-          </div>
-        )}
-        {isVisible("email_opt_out") && (
-          <div className="field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <input type="checkbox" disabled={!isEditable("email_opt_out")} checked={draft.email_opt_out} onChange={(e) => setDraft({ ...draft, email_opt_out: e.target.checked })} id="lead-optout" />
-            <label htmlFor="lead-optout" className="lab" style={{ margin: 0 }}>Email opt out</label>
-          </div>
+        {accountMode === "new" ? (
+          <>
+            <div className="lab" style={{ gridColumn: "1 / -1", marginTop: 4 }}>Lead details</div>
+            <div
+              className="fields"
+              style={{
+                gridColumn: "1 / -1",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 4,
+              }}
+            >
+              {leadFields}
+            </div>
+          </>
+        ) : (
+          leadFields
         )}
       </div>
     </Modal>
