@@ -163,3 +163,9 @@ export function skipCadenceTask(api: Api, taskId: string, notes?: string): Promi
     notes: notes || null,
   });
 }
+
+/** SKIPPED -> PENDING on the same task (no new task, no other task touched).
+ * Resolve it again afterwards with completeCadenceTask()/skipCadenceTask(). */
+export function reopenCadenceTask(api: Api, taskId: string): Promise<CadenceTaskOut> {
+  return api.post<CadenceTaskOut>(`/cadence-tasks/${taskId}/reopen`);
+}

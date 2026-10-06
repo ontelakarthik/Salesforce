@@ -9,6 +9,7 @@ import {
   completeCadenceTask,
   getCadenceTemplate,
   getLeadCadence,
+  reopenCadenceTask,
   skipCadenceTask,
   type CadenceTaskOut,
   type CadenceTemplateOut,
@@ -54,7 +55,8 @@ export default function LeadCadencePanel({ leadId }: { leadId: string }) {
   const [detail, setDetail] = useState<LeadCadenceDetailOut | null | undefined>(undefined);
   const [template, setTemplate] = useState<CadenceTemplateOut | null>(null);
   const [showEnroll, setShowEnroll] = useState(false);
-  const [notes, setNotes] = useState("");
+  // Notes are per task: a reopened task can sit beside the next step's task, both actionable.
+  const [notesByTask, setNotesByTask] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isCancelling, setIsCancelling] = useState(false);
@@ -63,7 +65,7 @@ export default function LeadCadencePanel({ leadId }: { leadId: string }) {
     getLeadCadence(api, leadId)
       .then((d) => {
         setDetail(d);
-        setNotes("");
+        setNotesByTask({});
         if (d) {
           getCadenceTemplate(api, d.enrollment.cadence_template_id)
             .then(setTemplate)
@@ -96,8 +98,9 @@ export default function LeadCadencePanel({ leadId }: { leadId: string }) {
     setActionError(null);
     startTransition(async () => {
       try {
-        if (outcome === "DONE") await completeCadenceTask(api, taskId, notes.trim() || undefined);
-        else await skipCadenceTask(api, taskId, notes.trim() || undefined);
+        const notes = (notesByTask[taskId] ?? "").trim() || undefined;
+        if (outcome === "DONE") await completeCadenceTask(api, taskId, notes);
+        else await skipCadenceTask(api, taskId, notes);
         load();
       } catch (err) {
         setActionError(err instanceof ApiError ? err.message : "Failed to update task.");
@@ -105,8 +108,19 @@ export default function LeadCadencePanel({ leadId }: { leadId: string }) {
     });
   }
 
+  function reopenTask(taskId: string) {
+    setActionError(null);
+    startTransition(async () => {
+      try {
+        await reopenCadenceTask(api, taskId);
+        load();
+      } catch (err) {
+        setActionError(err instanceof ApiError ? err.message : "Failed to reopen task.");
+      }
+    });
+  }
+
   const tasks: CadenceTaskOut[] = detail ? [...detail.tasks].sort((a, b) => a.due_date.localeCompare(b.due_date)) : [];
-  const currentTask = tasks.find((t) => t.status === "PENDING");
 
   return (
     <div className="card">
@@ -163,18 +177,27 @@ export default function LeadCadencePanel({ leadId }: { leadId: string }) {
                   <div className="tl-d">
                     Due {formatDate(t.due_date)}
                     {t.status === "PENDING" && relativeDueLabel(t.due_date) && ` (${relativeDueLabel(t.due_date)})`}
-                    {t.completed_at && ` · resolved ${formatDate(t.completed_at)}`}
+                    {t.completed_at && t.status !== "PENDING" && ` · resolved ${formatDate(t.completed_at)}`}
                   </div>
                   {t.notes && <div className="tl-d">{t.notes}</div>}
-                  {t.id === currentTask?.id && (
+                  {t.status === "SKIPPED" && detail.enrollment.status !== "CANCELLED" && (
+                    <RoleOnly roles={["SALES", "ACCOUNT_EXEC", "ADMIN"]}>
+                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                        <button className="btn sm" disabled={isPending} onClick={() => reopenTask(t.id)}>
+                          Reopen
+                        </button>
+                      </div>
+                    </RoleOnly>
+                  )}
+                  {t.status === "PENDING" && (
                     <RoleOnly roles={["SALES", "ACCOUNT_EXEC", "ADMIN"]}>
                       <div style={{ marginTop: 8 }}>
                         <textarea
                           className="inp"
                           rows={2}
                           placeholder="Notes (optional)…"
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
+                          value={notesByTask[t.id] ?? ""}
+                          onChange={(e) => setNotesByTask({ ...notesByTask, [t.id]: e.target.value })}
                         />
                         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                           <button className="btn primary sm" disabled={isPending} onClick={() => respondToTask(t.id, "DONE")}>

@@ -335,6 +335,239 @@ class TestCadenceTaskCompletion:
         assert r.json()["error"]["code"] == "CADENCE_TASK_NOT_FOUND"
 
 
+FIVE_STEPS = [
+    {"step_order": 1, "step_type": "CALL", "subject": "Call the lead", "wait_days": 0},
+    {"step_order": 2, "step_type": "EMAIL", "subject": "introduction Email", "wait_days": 1},
+    {"step_order": 3, "step_type": "LINKEDIN", "subject": "Connect on LinkedIn", "wait_days": 2},
+    {"step_order": 4, "step_type": "FOLLOW_UP", "subject": "Follow-up", "wait_days": 2},
+    {"step_order": 5, "step_type": "OTHER", "subject": "Custom Task", "wait_days": 1},
+]
+
+
+class TestCadenceTaskReopen:
+    """SKIPPED -> reopen -> PENDING on the same task row; never a new task,
+    never a change to any other task or to how the cadence has progressed."""
+
+    def _enroll(self, client, headers, steps=TWO_STEPS):
+        lead = _lead(client, headers)
+        template = _template(client, headers, steps)
+        r = client.post(f"/api/v1/leads/{lead['id']}/cadence/enroll",
+                        json={"cadence_template_id": template["id"]}, headers=headers)
+        assert r.status_code == 201, r.text
+        return lead, r.json()
+
+    def _detail(self, client, headers, lead):
+        r = client.get(f"/api/v1/leads/{lead['id']}/cadence", headers=headers)
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    def _resolve(self, client, headers, task_id, outcome, notes=None):
+        r = client.post(f"/api/v1/cadence-tasks/{task_id}/complete",
+                        json={"outcome_status": outcome, "notes": notes}, headers=headers)
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    def _reopen(self, client, headers, task_id):
+        return client.post(f"/api/v1/cadence-tasks/{task_id}/reopen", headers=headers)
+
+    @staticmethod
+    def _by_type(detail):
+        return {t["step_type"]: t for t in detail["tasks"]}
+
+    def test_reopen_returns_the_same_task_to_pending_without_creating_another(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers)
+        call_id = enrolled["tasks"][0]["id"]
+        skipped = self._resolve(client, admin_headers, call_id, "SKIPPED", notes="Out of office")
+        before = self._detail(client, admin_headers, lead)
+
+        r = self._reopen(client, admin_headers, call_id)
+        assert r.status_code == 200, r.text
+        reopened = r.json()
+        assert reopened["id"] == call_id
+        assert reopened["status"] == "PENDING"
+        # original task information is preserved
+        assert reopened["subject"] == skipped["subject"]
+        assert reopened["step_type"] == "CALL"
+        assert reopened["due_date"] == skipped["due_date"]
+        assert reopened["notes"] == "Out of office"
+        assert reopened["completed_at"] == skipped["completed_at"]  # original resolution time kept
+
+        after = self._detail(client, admin_headers, lead)
+        assert len(after["tasks"]) == len(before["tasks"]) == 2  # no duplicate Step 1
+        assert after["enrollment"]["current_step_order"] == 2    # cadence not restarted/rewound
+        assert after["enrollment"]["status"] == "ACTIVE"
+
+    def test_reopen_leaves_the_active_next_task_untouched(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers)
+        self._resolve(client, admin_headers, enrolled["tasks"][0]["id"], "SKIPPED")
+        email_before = self._by_type(self._detail(client, admin_headers, lead))["EMAIL"]
+        assert email_before["status"] == "PENDING"
+
+        assert self._reopen(client, admin_headers, enrolled["tasks"][0]["id"]).status_code == 200
+
+        tasks = self._by_type(self._detail(client, admin_headers, lead))
+        assert tasks["EMAIL"] == email_before  # byte-for-byte unchanged, still PENDING
+        assert tasks["CALL"]["status"] == "PENDING"
+
+    def test_completing_a_reopened_task_does_not_touch_or_duplicate_the_next_one(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers)
+        call_id = enrolled["tasks"][0]["id"]
+        self._resolve(client, admin_headers, call_id, "SKIPPED")
+        email_before = self._by_type(self._detail(client, admin_headers, lead))["EMAIL"]
+        self._reopen(client, admin_headers, call_id)
+
+        done = self._resolve(client, admin_headers, call_id, "DONE")
+        assert done["status"] == "DONE"
+
+        detail = self._detail(client, admin_headers, lead)
+        assert len(detail["tasks"]) == 2  # still exactly one CALL and one EMAIL
+        assert self._by_type(detail)["EMAIL"] == email_before  # Step 2 still PENDING, unchanged
+        assert detail["enrollment"]["current_step_order"] == 2
+        assert detail["enrollment"]["status"] == "ACTIVE"
+
+    def test_skip_reopen_skip_reopen_complete_stays_consistent(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers)
+        call_id = enrolled["tasks"][0]["id"]
+        self._resolve(client, admin_headers, call_id, "SKIPPED")
+        email_before = self._by_type(self._detail(client, admin_headers, lead))["EMAIL"]
+
+        for _ in range(2):
+            assert self._reopen(client, admin_headers, call_id).json()["status"] == "PENDING"
+            assert self._resolve(client, admin_headers, call_id, "SKIPPED")["status"] == "SKIPPED"
+        assert self._reopen(client, admin_headers, call_id).json()["status"] == "PENDING"
+        assert self._resolve(client, admin_headers, call_id, "DONE")["status"] == "DONE"
+
+        detail = self._detail(client, admin_headers, lead)
+        assert len(detail["tasks"]) == 2
+        assert self._by_type(detail)["EMAIL"] == email_before
+        assert detail["enrollment"]["current_step_order"] == 2
+
+    def test_the_original_skip_note_is_kept_when_the_reopened_task_is_resolved_without_a_note(
+            self, client, admin_headers):
+        _lead_row, enrolled = self._enroll(client, admin_headers)
+        call_id = enrolled["tasks"][0]["id"]
+        self._resolve(client, admin_headers, call_id, "SKIPPED", notes="No answer")
+        self._reopen(client, admin_headers, call_id)
+        assert self._resolve(client, admin_headers, call_id, "DONE")["notes"] == "No answer"
+
+    def test_a_new_note_replaces_the_old_one_when_the_reopened_task_is_resolved(self, client, admin_headers):
+        _lead_row, enrolled = self._enroll(client, admin_headers)
+        call_id = enrolled["tasks"][0]["id"]
+        self._resolve(client, admin_headers, call_id, "SKIPPED", notes="No answer")
+        self._reopen(client, admin_headers, call_id)
+        assert self._resolve(client, admin_headers, call_id, "DONE", notes="Reached them")["notes"] == "Reached them"
+
+    def test_only_a_skipped_task_can_be_reopened(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers)
+        call_id = enrolled["tasks"][0]["id"]
+
+        r = self._reopen(client, admin_headers, call_id)  # still PENDING
+        assert r.status_code == 422
+        assert r.json()["error"]["code"] == "CADENCE_TASK_NOT_SKIPPED"
+
+        self._resolve(client, admin_headers, call_id, "DONE")
+        r = self._reopen(client, admin_headers, call_id)  # DONE
+        assert r.status_code == 422
+        assert r.json()["error"]["code"] == "CADENCE_TASK_NOT_SKIPPED"
+        assert len(self._detail(client, admin_headers, lead)["tasks"]) == 2
+
+    def test_reopen_task_not_found(self, client, admin_headers):
+        r = self._reopen(client, admin_headers, uuid.uuid4())
+        assert r.status_code == 404
+        assert r.json()["error"]["code"] == "CADENCE_TASK_NOT_FOUND"
+
+    def test_task_of_a_cancelled_cadence_cannot_be_reopened(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers)
+        client.post(f"/api/v1/leads/{lead['id']}/cadence/cancel", headers=admin_headers)
+
+        r = self._reopen(client, admin_headers, enrolled["tasks"][0]["id"])
+        assert r.status_code == 422
+        assert r.json()["error"]["code"] == "CADENCE_ENROLLMENT_CANCELLED"
+
+    def test_reopening_a_task_of_a_completed_cadence_does_not_restart_it(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers)
+        call_id = enrolled["tasks"][0]["id"]
+        self._resolve(client, admin_headers, call_id, "SKIPPED")
+        email_id = self._by_type(self._detail(client, admin_headers, lead))["EMAIL"]["id"]
+        self._resolve(client, admin_headers, email_id, "DONE")
+        completed = self._detail(client, admin_headers, lead)["enrollment"]
+        assert completed["status"] == "COMPLETED"
+
+        assert self._reopen(client, admin_headers, call_id).status_code == 200
+        self._resolve(client, admin_headers, call_id, "DONE")
+
+        detail = self._detail(client, admin_headers, lead)
+        assert len(detail["tasks"]) == 2
+        assert detail["enrollment"] == completed  # still COMPLETED, same completed_at
+
+    def test_sales_cannot_reopen_a_task_on_an_unowned_lead(self, client, admin_headers, sales_headers):
+        owner = client.post("/api/v1/admin/employees",
+                            json={"email": f"owner.{uuid.uuid4()}@example.com", "full_name": "Owner Rep"},
+                            headers=admin_headers).json()
+        lead = _lead(client, admin_headers, owner_employee_id=owner["id"])
+        template = _template(client, admin_headers, TWO_STEPS)
+        enrolled = client.post(f"/api/v1/leads/{lead['id']}/cadence/enroll",
+                               json={"cadence_template_id": template["id"]}, headers=admin_headers).json()
+        task_id = enrolled["tasks"][0]["id"]
+        self._resolve(client, admin_headers, task_id, "SKIPPED")
+
+        r = self._reopen(client, sales_headers, task_id)
+        assert r.status_code == 403
+        assert r.json()["error"]["code"] == "FORBIDDEN"
+
+    def test_five_step_cadence_skip_reopen_complete_scenario(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers, FIVE_STEPS)
+        call_id = enrolled["tasks"][0]["id"]
+
+        # Step 1 Call skipped -> Step 2 Email becomes active
+        self._resolve(client, admin_headers, call_id, "SKIPPED")
+        detail = self._detail(client, admin_headers, lead)
+        assert [t["step_type"] for t in detail["tasks"]] == ["CALL", "EMAIL"]
+        assert self._by_type(detail)["EMAIL"]["status"] == "PENDING"
+        email_before = self._by_type(detail)["EMAIL"]
+
+        # Reopen Step 1: actionable again, Step 2 still active, nothing duplicated
+        assert self._reopen(client, admin_headers, call_id).json()["status"] == "PENDING"
+        detail = self._detail(client, admin_headers, lead)
+        assert len(detail["tasks"]) == 2
+        assert self._by_type(detail)["EMAIL"] == email_before
+
+        # Complete Step 1: Step 2 still active and available, no restart, no duplicate
+        self._resolve(client, admin_headers, call_id, "DONE")
+        detail = self._detail(client, admin_headers, lead)
+        assert len(detail["tasks"]) == 2
+        assert self._by_type(detail)["CALL"]["status"] == "DONE"
+        assert self._by_type(detail)["EMAIL"] == email_before
+        assert detail["enrollment"]["current_step_order"] == 2
+
+        # A DONE task is final: it can neither be skipped again nor reopened
+        r = client.post(f"/api/v1/cadence-tasks/{call_id}/complete",
+                        json={"outcome_status": "SKIPPED"}, headers=admin_headers)
+        assert r.status_code == 422
+        assert self._reopen(client, admin_headers, call_id).status_code == 422
+
+        # Step 2 can still be worked normally: completing it advances to Step 3 exactly once
+        self._resolve(client, admin_headers, email_before["id"], "DONE")
+        detail = self._detail(client, admin_headers, lead)
+        assert [t["step_type"] for t in sorted(detail["tasks"], key=lambda t: t["created_at"])] == \
+            ["CALL", "EMAIL", "LINKEDIN"]
+        assert detail["enrollment"]["current_step_order"] == 3
+
+    def test_five_step_skip_then_reopen_again_after_the_cadence_moved_on(self, client, admin_headers):
+        lead, enrolled = self._enroll(client, admin_headers, FIVE_STEPS)
+        call_id = enrolled["tasks"][0]["id"]
+        self._resolve(client, admin_headers, call_id, "SKIPPED")
+        self._reopen(client, admin_headers, call_id)
+        self._resolve(client, admin_headers, call_id, "SKIPPED")  # skip Step 1 again
+        self._reopen(client, admin_headers, call_id)              # reopen Step 1 again
+        self._resolve(client, admin_headers, call_id, "DONE")     # and complete it
+
+        detail = self._detail(client, admin_headers, lead)
+        assert [t["step_type"] for t in detail["tasks"]] == ["CALL", "EMAIL"]
+        assert self._by_type(detail)["EMAIL"]["status"] == "PENDING"
+        assert detail["enrollment"]["current_step_order"] == 2
+
+
 class TestCadenceScope:
     def test_sales_cannot_complete_task_on_unowned_lead(self, client, admin_headers, sales_headers):
         owner = client.post("/api/v1/admin/employees",

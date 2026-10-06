@@ -2385,6 +2385,15 @@ def _advance_past_step(
     enrollment for this step. Returns True iff this was the last step (the
     enrollment is now COMPLETED)."""
     all_steps = sorted(step_repo.list_for_template(current_step.cadence_template_id), key=lambda s: s.step_order)
+    # A reopened SKIPPED task (see reopen_cadence_task()) is resolved a second
+    # time after the enrollment already advanced past its step, so it must not
+    # advance again: that would create a duplicate next-step task and rewind
+    # current_step_order. Already advanced == the enrollment is no longer
+    # ACTIVE (it completed/cancelled) or a task for a later step already exists.
+    later_step_ids = {s.id for s in all_steps if s.step_order > current_step.step_order}
+    if enrollment.status != LeadCadenceEnrollmentStatus.ACTIVE.value or any(
+            t.cadence_step_id in later_step_ids for t in task_repo.list_for_enrollment(enrollment.id)):
+        return False
     next_step = next((s for s in all_steps if s.step_order > current_step.step_order), None)
     if next_step is not None:
         task_repo.create(
@@ -2435,7 +2444,9 @@ def complete_cadence_task(
     # the race-safe backstop for the concurrent one).
     updated_task = task_repo.update_if(
         task_id, expected={"status": CadenceTaskStatus.PENDING.value},
-        status=payload.outcome_status, completed_at=now, notes=payload.notes,
+        status=payload.outcome_status, completed_at=now,
+        # A reopened task still carries its earlier note — only replace it when a new one is given.
+        notes=payload.notes if payload.notes is not None else task.notes,
         updated_by=user.employee_id,
     )
     if updated_task is None:
@@ -2452,6 +2463,45 @@ def complete_cadence_task(
 
     _advance_past_step(enrollment, current_step, step_repo, task_repo, enrollment_repo, now, user.employee_id)
     return _cadence_task_out(updated_task, current_step, lead)
+
+
+@handle_errors("reopen cadence task")
+def reopen_cadence_task(
+    user: CurrentUser, lead_repo: LeadRepository, enrollment_repo: LeadCadenceEnrollmentRepository,
+    step_repo: CadenceStepRepository, task_repo: CadenceTaskRepository, task_id,
+) -> crm_models.CadenceTaskOut:
+    """SKIPPED -> PENDING on the SAME task row, so a skipped step can be
+    worked again. Deliberately does nothing else: no new task is created, no
+    other task or the enrollment is touched, and the due date, subject, notes
+    and original resolution timestamp (completed_at, overwritten only when the
+    task is resolved again) are kept. Resolving the reopened task afterwards
+    goes through complete_cadence_task() like any PENDING task, and
+    _advance_past_step() keeps that from advancing the cadence a second time.
+    A CANCELLED enrollment's tasks can't be reopened — that cadence was
+    stopped on purpose."""
+    task = task_repo.get(task_id)
+    if task is None:
+        raise DomainError("CADENCE_TASK_NOT_FOUND", f"No cadence task '{task_id}'.", 404)
+    if task.status != CadenceTaskStatus.SKIPPED.value:
+        raise DomainError("CADENCE_TASK_NOT_SKIPPED", "Only a SKIPPED task can be reopened.", 422)
+    enrollment = enrollment_repo.get(task.enrollment_id)
+    if enrollment is None:
+        raise DomainError("CADENCE_ENROLLMENT_NOT_FOUND", "This task's enrollment no longer exists.", 404)
+    if enrollment.status == LeadCadenceEnrollmentStatus.CANCELLED.value:
+        raise DomainError(
+            "CADENCE_ENROLLMENT_CANCELLED", "A task of a cancelled cadence can't be reopened.", 422)
+    lead = _get_lead_or_404(lead_repo, enrollment.lead_id)
+    _require_write_scope(user, lead, "Lead is outside your data scope.")
+    step = _get_cadence_step_or_404(step_repo, task.cadence_step_id)
+
+    # Race-safe like complete_cadence_task(): only one concurrent reopen wins.
+    updated_task = task_repo.update_if(
+        task_id, expected={"status": CadenceTaskStatus.SKIPPED.value},
+        status=CadenceTaskStatus.PENDING.value, auto_resolved=False, updated_by=user.employee_id,
+    )
+    if updated_task is None:
+        raise DomainError("CADENCE_TASK_NOT_SKIPPED", "Only a SKIPPED task can be reopened.", 422)
+    return _cadence_task_out(updated_task, step, lead)
 
 
 def _previous_activity_cutoff(

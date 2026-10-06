@@ -739,6 +739,16 @@ def complete_cadence_task(task_id: UUID, payload: crm_models.CadenceTaskComplete
         u, lead_repo, enrollment_repo, step_repo, task_repo, task_id, payload, comm_repo)
 
 
+@router.post("/cadence-tasks/{task_id}/reopen", response_model=crm_models.CadenceTaskOut)
+def reopen_cadence_task(task_id: UUID,
+                        u: CurrentUser = Depends(requires("cadences.enroll")),
+                        lead_repo=Depends(get_lead_repository),
+                        enrollment_repo=Depends(get_lead_cadence_enrollment_repository),
+                        step_repo=Depends(get_cadence_step_repository),
+                        task_repo=Depends(get_cadence_task_repository)):
+    return crm_service.reopen_cadence_task(u, lead_repo, enrollment_repo, step_repo, task_repo, task_id)
+
+
 @router.get("/cadence-tasks/my", response_model=list[crm_models.CadenceTaskOut])
 def list_my_cadence_tasks(u: CurrentUser = Depends(requires("platform.read")),
                           lead_repo=Depends(get_lead_repository),
