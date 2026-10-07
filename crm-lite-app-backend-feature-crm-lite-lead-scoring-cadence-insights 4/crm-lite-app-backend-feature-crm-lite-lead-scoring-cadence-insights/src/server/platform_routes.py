@@ -12,7 +12,10 @@ from fastapi import APIRouter, Depends, Query
 from src.models import admin_models, platform_models
 from src.repositories.activity_repository import get_communication_repository, get_notification_repository
 from src.repositories.contracts_repository import get_agreement_repository
-from src.repositories.crm_repository import get_account_repository, get_lead_repository, get_opportunity_repository
+from src.repositories.crm_repository import (
+    get_account_repository, get_cadence_task_repository, get_lead_cadence_enrollment_repository,
+    get_lead_repository, get_opportunity_repository,
+)
 from src.repositories.delivery_repository import get_sow_timesheet_repository
 from src.repositories.project_repository import get_project_repository
 from src.services import platform_service
@@ -49,6 +52,14 @@ def manager_dashboard(
         u, lead_repo, comm_repo, campaign_id=campaign_id, industry=industry,
         owner_employee_id=owner_employee_id, date_from=date_from, date_to=date_to,
         hot_lead_score_threshold=hot_lead_score_threshold)
+
+
+@router.get("/task-dashboard", response_model=platform_models.TaskDashboardOut)
+def task_dashboard(u: CurrentUser = Depends(requires("manager_dashboard.read")),
+                   lead_repo=Depends(get_lead_repository),
+                   enrollment_repo=Depends(get_lead_cadence_enrollment_repository),
+                   task_repo=Depends(get_cadence_task_repository)):
+    return platform_service.task_dashboard(u, lead_repo, enrollment_repo, task_repo)
 
 
 @router.get("/search", response_model=platform_models.SearchOut)

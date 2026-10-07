@@ -50,6 +50,27 @@ class ManagerDashboardOut(BaseModel):
     hot_lead_count: int
 
 
+class RepTaskSummary(BaseModel):
+    """One row of the Task Dashboard — `None` for owner_employee_id is the
+    "Unassigned" row (tasks of leads with no owner) in per_rep, and the
+    all-reps total in team_totals. Always assigned == completed + pending +
+    overdue: every task lands in exactly one of the three — see
+    platform_service.classify_cadence_task()."""
+    owner_employee_id: uuid.UUID | None = None
+    assigned: int = 0
+    completed: int = 0
+    pending: int = 0
+    overdue: int = 0
+
+
+class TaskDashboardOut(BaseModel):
+    """Per-rep cadence-task counts — see platform_service.task_dashboard().
+    Deliberately separate from ManagerDashboardOut (the Rep leaderboard's
+    payload), which it neither reuses nor changes."""
+    per_rep: list[RepTaskSummary]
+    team_totals: RepTaskSummary
+
+
 class DashboardOut(BaseModel):
     total_accounts: int
     total_agreements: int

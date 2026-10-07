@@ -33,3 +33,25 @@ export interface ManagerDashboardOut {
 export function getManagerDashboard(api: Api): Promise<ManagerDashboardOut> {
   return api.get<ManagerDashboardOut>("/manager-dashboard");
 }
+
+/** One row of the Task Dashboard. owner_employee_id null = "Unassigned"
+ * (tasks of leads with no owner). assigned === completed + pending + overdue. */
+export interface RepTaskSummary {
+  owner_employee_id: string | null;
+  assigned: number;
+  completed: number;
+  pending: number;
+  overdue: number;
+}
+
+export interface TaskDashboardOut {
+  per_rep: RepTaskSummary[];
+  team_totals: RepTaskSummary;
+}
+
+/** Cadence tasks per assigned rep — GET /task-dashboard. Same
+ * manager_dashboard.read gate as getManagerDashboard(), and just as
+ * unscoped by "rows I own". */
+export function getTaskDashboard(api: Api): Promise<TaskDashboardOut> {
+  return api.get<TaskDashboardOut>("/task-dashboard");
+}

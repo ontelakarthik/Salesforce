@@ -9,6 +9,7 @@ import { useEmployeeDirectory } from "@/lib/api/identity";
 import { flagLeadHot, listLeads, type LeadOut } from "@/lib/api/crm";
 import { getManagerDashboard, type ManagerDashboardOut } from "@/lib/api/platform";
 import { STATUS_BADGE, STATUS_LABEL, leadFullName } from "./leadShared";
+import TaskDashboard from "./TaskDashboard";
 
 function repName(employeeLabel: (id: string | null) => string, ownerId: string | null): string {
   return ownerId ? employeeLabel(ownerId) : "Unassigned";
@@ -149,6 +150,8 @@ export default function LeadershipPanel() {
           </div>
         </div>
       </div>
+
+      <TaskDashboard />
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-head">

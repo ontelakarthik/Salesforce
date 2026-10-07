@@ -23,10 +23,13 @@ from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4
 
 from src.models import platform_models
-from src.models.enums import AgreementStatus, LeadStatus, TimesheetStatus
+from src.models.enums import AgreementStatus, CadenceTaskStatus, LeadStatus, TimesheetStatus
 from src.repositories.activity_repository import CommunicationRepository, NotificationRepository
 from src.repositories.contracts_repository import AgreementRepository, get_agreement_status_repository
-from src.repositories.crm_repository import AccountRepository, LeadRepository, OpportunityRepository
+from src.repositories.crm_repository import (
+    AccountRepository, CadenceTaskRepository, LeadCadenceEnrollmentRepository, LeadRepository,
+    OpportunityRepository,
+)
 from src.repositories.delivery_repository import SowTimesheetRepository
 from src.repositories.project_repository import ProjectRepository, get_project_status_repository
 from src.services import admin_service
@@ -218,6 +221,64 @@ def manager_dashboard(
         conversion_rate_percent=round(converted / total_leads * 100, 1) if total_leads else None,
         hot_lead_count=hot_lead_count,
     )
+
+
+COMPLETED = "completed"
+PENDING = "pending"
+OVERDUE = "overdue"
+
+
+def classify_cadence_task(status: str, due_date: date, today: date) -> str:
+    """The Task Dashboard's one rule — every task is exactly one of:
+    - DONE                              -> completed (never overdue, however old)
+    - anything else, due_date < today   -> overdue
+    - anything else, due today or later -> pending
+    "Anything else" is PENDING *and* SKIPPED: a skipped task isn't completed,
+    so it still counts as pending until its due date passes, then overdue. A
+    reopened task is simply PENDING again, so it needs no special case."""
+    if status == CadenceTaskStatus.DONE.value:
+        return COMPLETED
+    return OVERDUE if due_date < today else PENDING
+
+
+@handle_errors("load the task dashboard")
+def task_dashboard(
+    user: CurrentUser, lead_repo: LeadRepository, enrollment_repo: LeadCadenceEnrollmentRepository,
+    task_repo: CadenceTaskRepository, *, today: date | None = None,
+) -> platform_models.TaskDashboardOut:
+    """Cadence tasks per assigned rep, for the manager dashboard's "Task
+    Dashboard" card. A cadence task has no owner column of its own: it
+    belongs to an enrollment, which belongs to a lead, and the lead's
+    owner_employee_id is the rep working it (same relationship
+    crm_service.list_my_cadence_tasks() uses) — so a lead with no owner puts
+    its tasks under Unassigned (owner_employee_id None). Like
+    manager_dashboard() it is intentionally not scoped to "rows I own" (gated
+    by manager_dashboard.read instead). Every task whose lead still exists is
+    counted exactly once, whatever its status or enrollment state. `today` is
+    UTC, the same clock the cadence scheduler uses for "due"."""
+    today = today or _now().date()
+    owner_by_lead = {lead.id: lead.owner_employee_id for lead in lead_repo.list()}
+    lead_by_enrollment = {e.id: e.lead_id for e in enrollment_repo.list()}
+
+    reps: dict = {}
+    for task in task_repo.list():
+        lead_id = lead_by_enrollment.get(task.enrollment_id)
+        if lead_id not in owner_by_lead:
+            continue  # its enrollment/lead no longer exists — nobody to attribute it to
+        row = reps.setdefault(owner_by_lead[lead_id], {COMPLETED: 0, PENDING: 0, OVERDUE: 0})
+        row[classify_cadence_task(task.status, task.due_date, today)] += 1
+
+    def summary(owner, counts) -> platform_models.RepTaskSummary:
+        return platform_models.RepTaskSummary(
+            owner_employee_id=owner, assigned=sum(counts.values()),
+            completed=counts[COMPLETED], pending=counts[PENDING], overdue=counts[OVERDUE])
+
+    per_rep = sorted(
+        (summary(owner, counts) for owner, counts in reps.items()),
+        # busiest first, with the Unassigned bucket always last
+        key=lambda r: (r.owner_employee_id is None, -r.assigned, str(r.owner_employee_id)))
+    totals = {k: sum(r[k] for r in reps.values()) for k in (COMPLETED, PENDING, OVERDUE)}
+    return platform_models.TaskDashboardOut(per_rep=per_rep, team_totals=summary(None, totals))
 
 
 @handle_errors("run the search")
